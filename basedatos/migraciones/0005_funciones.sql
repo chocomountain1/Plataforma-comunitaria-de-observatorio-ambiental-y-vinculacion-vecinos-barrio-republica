@@ -112,8 +112,16 @@ $$;
 -- Devuelve cuantas confirmaciones quedaron. Si la persona ya habia confirmado
 -- o es la autora, la restriccion de la tabla corta la operacion: la regla no
 -- depende de que esta funcion la recuerde.
+--
+-- Corre como duena porque necesita leer reportes.autor para copiarlo a la
+-- tabla de confirmaciones, y el cliente no puede leer esa columna: es lo que
+-- impide que el autor de un reporte anonimo se filtre. No abre un hueco,
+-- porque quien confirma lo fija la propia funcion con auth.uid(), y las dos
+-- reglas que importan viven en la tabla y no aqui.
 create or replace function confirmar_reporte (p_reporte uuid) returns integer
 language plpgsql
+security definer
+set search_path = public
 as $$
 declare
   cuantas integer;
@@ -184,7 +192,10 @@ $$;
 create or replace function peso_por_antiguedad (p_publicado_en timestamptz)
 returns double precision
 language sql
-immutable
+-- Estable y no inmutable: llama a now(), asi que su resultado cambia con el
+-- tiempo aunque el argumento sea el mismo. Declararla inmutable dejaria que el
+-- planificador cachee un peso viejo.
+stable
 as $$
   select exp (
     -ln (2) * (extract (epoch from (now() - p_publicado_en)) / 86400) / 30

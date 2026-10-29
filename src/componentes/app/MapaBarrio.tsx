@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Image,
   PanResponder,
@@ -19,7 +19,7 @@ import {
   ZOOM_MAXIMO,
   ZOOM_MINIMO,
 } from '@/dominio/barrio';
-import type { PuntoEnMapa } from '@/dominio/tipos';
+import type { PuntoEnMapa, RecuadroDelMapa } from '@/dominio/tipos';
 import { LADO_DE_TESELA, aCoordenada, aPixeles, direccionDeTesela } from '@/utiles/geografia';
 
 /** Convierte un punto del mapa a la posicion que ocupa en la pantalla. */
@@ -33,6 +33,14 @@ type PropsMapaBarrio = {
   zoom?: number;
   /** Avisa donde quedo el centro al terminar un arrastre. */
   alMoverse?: (centro: PuntoEnMapa) => void;
+  /**
+   * Avisa que area quedo a la vista, para que la pantalla pida a la base solo
+   * los elementos que entran ahi.
+   *
+   * Tiene que venir envuelta en useCallback: se llama desde un efecto que
+   * depende de ella, y una funcion nueva en cada render haria un ciclo.
+   */
+  alCambiarElArea?: (recuadro: RecuadroDelMapa, zoom: number) => void;
   /** Las fichas muestran el mapa como ilustracion y no se arrastran. */
   interactivo?: boolean;
 };
@@ -66,6 +74,7 @@ export function MapaBarrio({
   centro: centroInicial = CENTRO_DEL_BARRIO,
   zoom: zoomInicial = ZOOM_DEL_BARRIO,
   alMoverse,
+  alCambiarElArea,
   interactivo = true,
 }: PropsMapaBarrio) {
   const [medida, setMedida] = useState({ ancho: 390, alto: 844 });
@@ -126,6 +135,13 @@ export function MapaBarrio({
 
   const teselas = teselasVisibles(izquierdaDelMundo, arribaDelMundo, medida, zoom);
 
+  // Se avisa al terminar el gesto y no durante, porque arrastrar dispararia
+  // una consulta por cada fotograma.
+  useEffect(() => {
+    if (alCambiarElArea === undefined) return;
+    alCambiarElArea(areaALaVista(centro, zoom, medida), zoom);
+  }, [alCambiarElArea, centro, zoom, medida]);
+
   function cambiarZoom(paso: number) {
     setZoom((actual) => Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, actual + paso)));
   }
@@ -161,6 +177,29 @@ export function MapaBarrio({
       <Atribucion />
     </View>
   );
+}
+
+/** Los cuatro bordes de lo que cabe en pantalla con este centro y este zoom. */
+function areaALaVista(
+  centro: PuntoEnMapa,
+  zoom: number,
+  medida: { ancho: number; alto: number },
+): RecuadroDelMapa {
+  const centroEnPixeles = aPixeles(centro, zoom);
+  const noroeste = aCoordenada(
+    { x: centroEnPixeles.x - medida.ancho / 2, y: centroEnPixeles.y - medida.alto / 2 },
+    zoom,
+  );
+  const sureste = aCoordenada(
+    { x: centroEnPixeles.x + medida.ancho / 2, y: centroEnPixeles.y + medida.alto / 2 },
+    zoom,
+  );
+  return {
+    norte: noroeste.latitud,
+    oeste: noroeste.longitud,
+    sur: sureste.latitud,
+    este: sureste.longitud,
+  };
 }
 
 /** Deja el centro dentro del barrio, con holgura para asomarse al borde. */

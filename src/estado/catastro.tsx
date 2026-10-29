@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { elementosEnRecuadro } from '@/datos/catastroEnLinea';
-import { hayBackend } from '@/datos/cliente';
+import { hayBackend, haySesion } from '@/datos/cliente';
 import type { IdCapaDelCatastro } from '@/dominio/capas';
 import { ZOOM_DEL_BARRIO } from '@/dominio/barrio';
 import type { ElementoEnElMapa, RecuadroDelMapa } from '@/dominio/tipos';
@@ -49,7 +49,17 @@ export function usarElementosDelCatastro(
     }
 
     let vigente = true;
-    elementosEnRecuadro(area.recuadro, clave.split(',') as IdCapaDelCatastro[])
+    haySesion()
+      .then(async (abierta) => {
+        // Las capas del catastro quedan detras de la cuenta, igual que el
+        // resto. Sin sesion no se pide nada, en vez de intentar y que la base
+        // rechace una peticion por cada movimiento del mapa.
+        if (!abierta) return [];
+        return await elementosEnRecuadro(
+          area.recuadro,
+          clave.split(',') as IdCapaDelCatastro[],
+        );
+      })
       .then((lista) => {
         if (vigente) setElementos(lista);
       })

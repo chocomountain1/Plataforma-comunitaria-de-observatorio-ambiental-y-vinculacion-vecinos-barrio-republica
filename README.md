@@ -65,17 +65,20 @@ nativas.
 
 | Pieza | Estado |
 |---|---|
-| Esquema de los reportes | Escrito, en `basedatos/migraciones` |
-| Funciones de registro y consulta | Escritas, en `src/datos/reportesEnLinea.ts` |
-| Proyecto de Supabase | **No existe.** Las migraciones no se han aplicado |
-| Sesión y cuentas | Pendiente. Hoy entra siempre como Rosa |
-| Capas del catastro | Bloqueadas, falta la autorización |
+| Proyecto de Supabase | Creado, región São Paulo, PostGIS 3.3.7 |
+| Esquema de los reportes | Aplicado y verificado |
+| Funciones de registro y consulta | Aplicadas y probadas contra la base |
+| Almacenamiento de imágenes | Depósito privado y políticas aplicadas |
+| Capas del catastro 2022 | 903 elementos cargados en ocho capas |
+| **Sesión y cuentas** | **Pendiente.** Hoy entra siempre como Rosa |
 
-Mientras no haya credenciales, la aplicación arranca con los datos de ejemplo
-en memoria y funciona igual que antes. Apenas se copien `EXPO_PUBLIC_SUPABASE_URL`
-y `EXPO_PUBLIC_SUPABASE_CLAVE_ANONIMA` a un `.env.local`, el estado empieza a
-leer y escribir contra la base sin tocar ninguna pantalla. Ver
-[`.env.example`](.env.example) y
+**El ingreso es lo único que falta para que la aplicación use todo esto.** Las
+políticas de fila se escriben contra `auth.uid()`, de modo que sin sesión la
+aplicación no puede leer ni escribir nada, y sigue funcionando con los datos de
+ejemplo en memoria. La decisión del 19 de octubre define el mecanismo: cuenta
+obligatoria, sin contraseña, con código de seis números al correo.
+
+Las credenciales van en un `.env.local`: ver [`.env.example`](.env.example) y
 [`basedatos/modelo-de-datos.md`](basedatos/modelo-de-datos.md).
 
 Dos advertencias que condicionan la puesta en marcha. El plan gratuito de
@@ -117,9 +120,9 @@ la letra, que se aplica a toda la aplicación.
 
 | Pieza | Estado en el prototipo | Qué falta |
 |---|---|---|
-| Datos | En memoria mientras no haya credenciales | Crear el proyecto y aplicar las migraciones |
-| Mapa | OpenStreetMap real, con arrastre y zoom | Las capas del catastro encima |
-| Fotografías | Trama diagonal de relleno | Almacenamiento de archivos |
+| Datos | En memoria hasta que exista el ingreso | Ingreso por código al correo |
+| Mapa | OpenStreetMap real, con arrastre y zoom | Que las capas se vean, lo que exige sesión |
+| Fotografías | Se eligen y se suben al publicar | Mostrarlas en el detalle del reporte |
 | Avisos | Lista precargada | Notificaciones push |
 | Sesión | Siempre entra como Rosa | Acceso por código al correo |
 

@@ -43,6 +43,19 @@ export const cliente: SupabaseClient | null = hayBackend
     })
   : null;
 
+/**
+ * Si hay una sesion abierta.
+ *
+ * Casi todo lo que la base expone exige cuenta, incluidas las capas del
+ * catastro. Preguntarlo antes de consultar evita disparar peticiones que la
+ * base va a rechazar mientras el ingreso por correo no exista.
+ */
+export async function haySesion(): Promise<boolean> {
+  if (cliente === null) return false;
+  const { data } = await cliente.auth.getSession();
+  return data.session !== null;
+}
+
 /** Atajo para las funciones de datos, que no pueden trabajar sin conexion. */
 export function exigirCliente(): SupabaseClient {
   if (cliente === null) {

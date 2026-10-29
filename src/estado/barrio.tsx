@@ -16,6 +16,7 @@ import type {
   Comentario,
   ModoDeParticipar,
   PosturaComentario,
+  PuntoEnMapa,
   Propuesta,
   Reporte,
 } from '@/dominio/tipos';
@@ -36,6 +37,7 @@ export type DatosDeReporteNuevo = {
   desdeCuando?: string;
   tieneFoto: boolean;
   anonimo: boolean;
+  posicion: PuntoEnMapa;
 };
 
 export type DatosDePropuestaNueva = {
@@ -178,7 +180,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       esMio: true,
       tieneFoto: datos.tieneFoto,
       // El punto queda donde la persona dejo el mapa en el paso de ubicacion.
-      posicion: { latitud: -33.452198, longitud: -70.663461 },
+      posicion: datos.posicion,
       seguimiento: [
         { estado: 'recibido', fecha: 'recién', detalle: 'Quedó publicado en el mapa', ocurrio: true },
         {

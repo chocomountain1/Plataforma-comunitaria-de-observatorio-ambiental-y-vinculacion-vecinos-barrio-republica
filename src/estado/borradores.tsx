@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
+import { CENTRO_DEL_BARRIO } from '@/dominio/barrio';
 import type { IdCategoria } from '@/dominio/categorias';
+import type { PuntoEnMapa } from '@/dominio/tipos';
 
 /**
  * Lo que la persona lleva escrito en los flujos de varios pasos.
@@ -19,6 +21,8 @@ export type BorradorDeReporte = {
   desdeCuando: string | null;
   descripcion: string;
   anonimo: boolean;
+  /** Donde quedo el punto al terminar el paso de ubicacion. */
+  posicion: PuntoEnMapa;
   /** Reporte parecido que se encontro cerca, si lo hubo. */
   posibleDuplicado: string | null;
 };
@@ -31,6 +35,9 @@ const reporteVacio: BorradorDeReporte = {
   desdeCuando: null,
   descripcion: '',
   anonimo: false,
+  // Arranca al centro del barrio, que es donde el mapa abre el paso de
+  // ubicacion. Si la persona no mueve el mapa, ese es el punto que vale.
+  posicion: CENTRO_DEL_BARRIO,
   posibleDuplicado: null,
 };
 

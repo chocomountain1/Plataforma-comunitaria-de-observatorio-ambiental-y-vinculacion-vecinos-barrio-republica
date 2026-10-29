@@ -15,6 +15,7 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio, sombras } from '@/diseno/medidas';
+import { ZOOM_PARA_UBICAR } from '@/dominio/barrio';
 import { usarBorradores } from '@/estado/borradores';
 import { crearVolver } from '@/utiles/navegacion';
 
@@ -39,7 +40,11 @@ export default function PasoUbicacion() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.mapaFondo }}>
-      <MapaBarrio />
+      <MapaBarrio
+        centro={reporte.posicion}
+        zoom={ZOOM_PARA_UBICAR}
+        alMoverse={(centro) => cambiarReporte({ posicion: centro })}
+      />
 
       <Columna
         separacion={espacio.medio}

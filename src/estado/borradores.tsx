@@ -4,6 +4,8 @@ import { CENTRO_DEL_BARRIO } from '@/dominio/barrio';
 import type { IdCategoria } from '@/dominio/categorias';
 import type { PuntoEnMapa } from '@/dominio/tipos';
 
+import { usarPreferencias } from './preferencias';
+
 /**
  * Lo que la persona lleva escrito en los flujos de varios pasos.
  *
@@ -74,16 +76,27 @@ type ContextoBorradores = {
 const Contexto = createContext<ContextoBorradores | null>(null);
 
 export function ProveedorBorradores({ children }: { children: ReactNode }) {
-  const [reporte, setReporte] = useState<BorradorDeReporte>(reporteVacio);
+  // El ajuste del perfil solo decide con que valor arranca el borrador. La
+  // decision de publicar sin mostrar autor se toma en cada reporte, en el paso
+  // de revision, que es donde la persona ve lo que esta por publicar.
+  const { proponerAnonimo } = usarPreferencias();
+
+  const [reporte, setReporte] = useState<BorradorDeReporte>({
+    ...reporteVacio,
+    anonimo: proponerAnonimo,
+  });
   const [propuesta, setPropuesta] = useState<BorradorDePropuesta>(propuestaVacia);
 
   const cambiarReporte = useCallback((cambios: Partial<BorradorDeReporte>) => {
     setReporte((actual) => ({ ...actual, ...cambios }));
   }, []);
 
-  const reiniciarReporte = useCallback((origen?: Partial<BorradorDeReporte>) => {
-    setReporte({ ...reporteVacio, ...origen });
-  }, []);
+  const reiniciarReporte = useCallback(
+    (origen?: Partial<BorradorDeReporte>) => {
+      setReporte({ ...reporteVacio, anonimo: proponerAnonimo, ...origen });
+    },
+    [proponerAnonimo],
+  );
 
   const cambiarPropuesta = useCallback((cambios: Partial<BorradorDePropuesta>) => {
     setPropuesta((actual) => ({ ...actual, ...cambios }));

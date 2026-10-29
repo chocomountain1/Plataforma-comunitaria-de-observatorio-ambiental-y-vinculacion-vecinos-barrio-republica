@@ -33,6 +33,14 @@ export type Preferencias = {
   avisarCambioDeEstado: boolean;
   /** Avisa de actividades nuevas en el barrio. */
   avisarActividades: boolean;
+  /**
+   * Deja marcado "anonimo" al empezar un reporte.
+   *
+   * Es una sugerencia y no una regla: el anonimato se decide publicacion por
+   * publicacion, y el paso de revision siempre permite cambiarlo. Por eso
+   * tampoco viaja a la base, se queda en el telefono.
+   */
+  proponerAnonimo: boolean;
 };
 
 const preferenciasIniciales: Preferencias = {
@@ -41,6 +49,7 @@ const preferenciasIniciales: Preferencias = {
   menosAnimaciones: false,
   avisarCambioDeEstado: true,
   avisarActividades: true,
+  proponerAnonimo: false,
 };
 
 const CLAVE_GUARDADO = 'barrio-republica.preferencias';

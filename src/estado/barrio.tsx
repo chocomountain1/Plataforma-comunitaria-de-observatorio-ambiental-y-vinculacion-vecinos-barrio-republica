@@ -1,11 +1,26 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { actividadesIniciales } from '@/datos/actividades';
 import { avisosIniciales } from '@/datos/avisos';
 import { capasIniciales } from '@/datos/catastro';
+import { hayBackend } from '@/datos/cliente';
 import { personas } from '@/datos/personas';
 import { propuestasIniciales } from '@/datos/propuestas';
 import { reportesIniciales } from '@/datos/reportes';
+import {
+  confirmarReporte as confirmarEnLinea,
+  crearReporte as crearEnLinea,
+  listarReportes as listarEnLinea,
+  senalarReporte as senalarEnLinea,
+} from '@/datos/reportesEnLinea';
 import type { IdCategoria } from '@/dominio/categorias';
 import type { IdEstado } from '@/dominio/estados';
 import { estados } from '@/dominio/estados';
@@ -71,6 +86,12 @@ type ContextoBarrio = {
   capas: CapaDelMapa[];
   /** Identificador del ultimo reporte publicado, para la pantalla de cierre. */
   ultimoReportePublicado: string | null;
+  /**
+   * Ultimo problema al hablar con la base, si lo hubo. Esta aqui para que un
+   * fallo de red no desaparezca en silencio: la pantalla que quiera avisarlo
+   * lo lee, y las que no, siguen igual que antes.
+   */
+  ultimoErrorDeDatos: string | null;
 
   confirmarReporte: (id: string) => void;
   descartarReporte: (id: string) => void;
@@ -109,6 +130,38 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
   const [avisos, setAvisos] = useState<Aviso[]>(avisosIniciales);
   const [capas, setCapas] = useState<CapaDelMapa[]>(capasIniciales);
   const [ultimoReportePublicado, setUltimoReportePublicado] = useState<string | null>(null);
+  const [ultimoErrorDeDatos, setUltimoErrorDeDatos] = useState<string | null>(null);
+
+  /**
+   * Manda la operacion a la base cuando hay backend configurado, y guarda el
+   * error si falla.
+   *
+   * No se espera el resultado a proposito. Las acciones de este contexto son
+   * sincronas porque asi las llaman las pantallas, y volverlas asincronas
+   * obligaria a tocar las 36. La memoria se actualiza al tiro y la base
+   * despues, que es el comportamiento que el prototipo ya tenia.
+   */
+  const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
+    if (!hayBackend) return;
+    operacion().catch((error: unknown) => {
+      setUltimoErrorDeDatos(
+        error instanceof Error ? error.message : 'No se pudo guardar en la base',
+      );
+    });
+  }, []);
+
+  // Con backend configurado los datos de ejemplo son solo lo que se ve
+  // mientras llega la primera respuesta.
+  useEffect(() => {
+    if (!hayBackend) return;
+    listarEnLinea()
+      .then(setReportes)
+      .catch((error: unknown) => {
+        setUltimoErrorDeDatos(
+          error instanceof Error ? error.message : 'No se pudieron cargar los reportes',
+        );
+      });
+  }, []);
 
   const cambiarUnReporte = useCallback(
     (id: string, transformar: (reporte: Reporte) => Reporte) => {
@@ -128,8 +181,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
           reporte.estado === 'recibido' && confirmaciones >= 3 ? 'verificado' : reporte.estado;
         return { ...reporte, confirmaciones, estado };
       });
+      sincronizar(() => confirmarEnLinea(id));
     },
-    [cambiarUnReporte],
+    [cambiarUnReporte, sincronizar],
   );
 
   const descartarReporte = useCallback(
@@ -138,8 +192,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         ...reporte,
         senalamientos: (reporte.senalamientos ?? 0) + 1,
       }));
+      sincronizar(() => senalarEnLinea(id));
     },
-    [cambiarUnReporte],
+    [cambiarUnReporte, sincronizar],
   );
 
   const cambiarEstadoDeReporte = useCallback(
@@ -176,6 +231,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       publicado: 'recién',
       resumen: 'Enviado recién',
       confirmaciones: 0,
+      anonimo: datos.anonimo,
       autor: datos.anonimo ? null : personas.rosa,
       esMio: true,
       tieneFoto: datos.tieneFoto,
@@ -200,8 +256,30 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     };
     setReportes((lista) => [reporte, ...lista]);
     setUltimoReportePublicado(id);
+
+    // El identificador local sirve para que la pantalla de cierre tenga algo
+    // que mostrar al instante. Cuando la base responde con el suyo, se cambia
+    // en la lista para que los enlaces apunten al reporte de verdad.
+    sincronizar(async () => {
+      const idReal = await crearEnLinea({
+        categoria: datos.categoria,
+        titulo: datos.direccion,
+        direccion: datos.direccion,
+        posicion: datos.posicion,
+        anonimo: datos.anonimo,
+        descripcion: datos.descripcion === '' ? undefined : datos.descripcion,
+        comoSeFormo: datos.comoSeFormo,
+        desdeCuando: datos.desdeCuando,
+        tieneFoto: datos.tieneFoto,
+      });
+      setReportes((lista) =>
+        lista.map((cada) => (cada.id === id ? { ...cada, id: idReal } : cada)),
+      );
+      setUltimoReportePublicado((actual) => (actual === id ? idReal : actual));
+    });
+
     return id;
-  }, []);
+  }, [sincronizar]);
 
   const cambiarUnaPropuesta = useCallback(
     (id: string, transformar: (propuesta: Propuesta) => Propuesta) => {
@@ -376,6 +454,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       avisos,
       capas,
       ultimoReportePublicado,
+      ultimoErrorDeDatos,
       confirmarReporte,
       descartarReporte,
       cambiarEstadoDeReporte,
@@ -401,6 +480,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       avisos,
       capas,
       ultimoReportePublicado,
+      ultimoErrorDeDatos,
       confirmarReporte,
       descartarReporte,
       cambiarEstadoDeReporte,

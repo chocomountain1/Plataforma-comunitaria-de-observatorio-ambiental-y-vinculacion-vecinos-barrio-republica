@@ -64,6 +64,17 @@ export type Reporte = {
   confirmaciones: number;
   /** Vecinos que lo marcaron como inexistente. Dispara la revision. */
   senalamientos?: number;
+  /**
+   * Publicado sin mostrar quien. Es una decision por publicacion y no una
+   * configuracion del perfil: la misma persona puede publicar un reporte con
+   * su nombre y el siguiente sin el.
+   */
+  anonimo: boolean;
+  /**
+   * Nulo cuando el reporte es anonimo. En la base el autor siempre existe;
+   * lo que llega a la aplicacion ya viene enmascarado por la vista, para que
+   * el dato no pueda filtrarse desde el cliente.
+   */
   autor: Persona | null;
   esMio: boolean;
   tieneFoto: boolean;

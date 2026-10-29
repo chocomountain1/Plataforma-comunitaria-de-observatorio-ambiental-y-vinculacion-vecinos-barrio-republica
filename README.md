@@ -57,21 +57,26 @@ Para revisar que no haya errores de tipos: `npm run revisar-tipos`.
 
 ## Estado de conexión con el backend
 
-**No hay backend conectado.** Todo lo que la aplicación muestra sale de
-`src/datos`, que son archivos de TypeScript con datos de ejemplo escritos a
-mano, y todo lo que la aplicación modifica vive en memoria dentro de
-`src/estado`.
+**El esquema y la capa de datos existen, el proyecto de Supabase no.**
 
-La decisión de stack del proyecto es Supabase con PostGIS, tomada el 19 de
-octubre de 2026 tras comparar cuatro alternativas, por ser la única con
-consultas espaciales nativas. Nada de eso está cableado todavía.
+La decisión de stack es Supabase con PostGIS, tomada el 19 de octubre de 2026
+tras comparar cuatro alternativas, por ser la única con consultas espaciales
+nativas.
 
-| Pieza | Hoy | Al conectar |
-|---|---|---|
-| Lectura de datos | Constantes en `src/datos` | Consultas a Supabase |
-| Escritura | `useState` en `src/estado/barrio.tsx` | Inserciones y actualizaciones |
-| Sesión | Siempre entra como Rosa | Cuenta obligatoria, anonimato por publicación |
-| Posiciones | Coordenadas del plano dibujado | Columna geográfica con índice espacial |
+| Pieza | Estado |
+|---|---|
+| Esquema de los reportes | Escrito, en `basedatos/migraciones` |
+| Funciones de registro y consulta | Escritas, en `src/datos/reportesEnLinea.ts` |
+| Proyecto de Supabase | **No existe.** Las migraciones no se han aplicado |
+| Sesión y cuentas | Pendiente. Hoy entra siempre como Rosa |
+| Capas del catastro | Bloqueadas, falta la autorización |
+
+Mientras no haya credenciales, la aplicación arranca con los datos de ejemplo
+en memoria y funciona igual que antes. Apenas se copien `EXPO_PUBLIC_SUPABASE_URL`
+y `EXPO_PUBLIC_SUPABASE_CLAVE_ANONIMA` a un `.env.local`, el estado empieza a
+leer y escribir contra la base sin tocar ninguna pantalla. Ver
+[`.env.example`](.env.example) y
+[`basedatos/modelo-de-datos.md`](basedatos/modelo-de-datos.md).
 
 Dos advertencias que condicionan la puesta en marcha. El plan gratuito de
 Supabase pausa los proyectos tras siete días sin actividad, lo que en una
@@ -112,8 +117,8 @@ la letra, que se aplica a toda la aplicación.
 
 | Pieza | Estado en el prototipo | Qué falta |
 |---|---|---|
-| Datos | En memoria, en `src/datos` | Conectar Supabase con PostGIS |
-| Mapa | Plano del barrio dibujado con SVG, a escala del diseño | Capas reales sobre OpenStreetMap |
+| Datos | En memoria mientras no haya credenciales | Crear el proyecto y aplicar las migraciones |
+| Mapa | OpenStreetMap real, con arrastre y zoom | Las capas del catastro encima |
 | Fotografías | Trama diagonal de relleno | Almacenamiento de archivos |
 | Avisos | Lista precargada | Notificaciones push |
 | Sesión | Siempre entra como Rosa | Acceso por código al correo |

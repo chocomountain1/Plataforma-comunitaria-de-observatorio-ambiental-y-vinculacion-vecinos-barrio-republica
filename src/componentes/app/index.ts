@@ -8,12 +8,7 @@ export { BarraNavegacion } from './BarraNavegacion';
 export { Encabezado } from './Encabezado';
 export { EtiquetaDeEstado, EtiquetaDeEtapa } from './EtiquetasDeDominio';
 export { FotoSimulada } from './FotoSimulada';
-export {
-  ALTO_DEL_PLANO,
-  ANCHO_DEL_PLANO,
-  MapaBarrio,
-  type Ubicador,
-} from './MapaBarrio';
+export { MapaBarrio, type Ubicador } from './MapaBarrio';
 export { LineaDeTiempo } from './LineaDeTiempo';
 export { ChipDeCategoria, MarcaDeCategoria, RotuloDeCategoria } from './MarcaDeCategoria';
 export { GrupoDeMarcadores, MarcadorMapa, MiUbicacion } from './MarcadorMapa';

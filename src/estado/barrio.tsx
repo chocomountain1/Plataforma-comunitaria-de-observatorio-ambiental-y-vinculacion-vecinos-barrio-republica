@@ -178,7 +178,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       esMio: true,
       tieneFoto: datos.tieneFoto,
       // El punto queda donde la persona dejo el mapa en el paso de ubicacion.
-      posicion: { x: 195, y: 430 },
+      posicion: { latitud: -33.452198, longitud: -70.663461 },
       seguimiento: [
         { estado: 'recibido', fecha: 'recién', detalle: 'Quedó publicado en el mapa', ocurrio: true },
         {
@@ -275,7 +275,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       })),
       quierenApoyar: [],
       comentarios: [],
-      posicion: { x: 195, y: 430 },
+      posicion: { latitud: -33.452198, longitud: -70.663461 },
       disciplinas: datos.disciplinas,
       apoyadaPorMi: true,
     };
@@ -336,7 +336,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       voluntariosNecesarios: datos.voluntariosNecesarios,
       tareas: datos.tareas,
       naceDePropuesta: datos.naceDePropuesta,
-      posicion: { x: 195, y: 430 },
+      posicion: { latitud: -33.452198, longitud: -70.663461 },
       miInscripcion: null,
     };
     setActividades((lista) => [actividad, ...lista]);

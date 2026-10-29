@@ -23,10 +23,13 @@ export type Persona = {
   esOrganizacion?: boolean;
 };
 
-/** Posicion sobre el plano del barrio, en las mismas coordenadas del mockup. */
+/**
+ * Posicion sobre el mapa, en grados decimales WGS84, que es el sistema en el
+ * que vienen las capas del catastro 2022 y el que espera PostGIS.
+ */
 export type PuntoEnMapa = {
-  x: number;
-  y: number;
+  latitud: number;
+  longitud: number;
 };
 
 /** Un paso del recorrido de un reporte, tal como se ve en "En que va". */

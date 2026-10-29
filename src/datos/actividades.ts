@@ -25,7 +25,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntariosNecesarios: 15,
     tareas: ['Llevar herramientas', 'Regar la primera semana', 'Difundir'],
     naceDePropuesta: 'huerta-toesca',
-    posicion: { x: 336, y: 576 },
+    posicion: { latitud: -33.454253, longitud: -70.657948 },
     miInscripcion: null,
   },
   {
@@ -45,7 +45,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntarios: 0,
     voluntariosNecesarios: 0,
     tareas: [],
-    posicion: { x: 150, y: 420 },
+    posicion: { latitud: -33.452057, longitud: -70.665221 },
     miInscripcion: null,
   },
   {
@@ -66,7 +66,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntariosNecesarios: 4,
     tareas: ['Tomar fotos', 'Guiar un tramo'],
     naceDePropuesta: 'placas-casonas',
-    posicion: { x: 256, y: 400 },
+    posicion: { latitud: -33.451776, longitud: -70.661076 },
     miInscripcion: null,
   },
 ];

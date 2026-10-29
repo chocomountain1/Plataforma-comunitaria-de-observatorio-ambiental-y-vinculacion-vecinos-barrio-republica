@@ -26,7 +26,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 202, y: 206 },
+    posicion: { latitud: -33.449046, longitud: -70.663187 },
     seguimiento: [
       { estado: 'recibido', fecha: '3 nov', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       {
@@ -88,7 +88,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 292, y: 602 },
+    posicion: { latitud: -33.454618, longitud: -70.659668 },
     seguimiento: [
       { estado: 'recibido', fecha: '28 oct', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: '29 oct', detalle: '5 vecinos lo confirmaron', ocurrio: true },
@@ -116,7 +116,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.rosa,
     esMio: true,
     tieneFoto: false,
-    posicion: { x: 68, y: 470 },
+    posicion: { latitud: -33.452761, longitud: -70.668427 },
     seguimiento: [
       { estado: 'recibido', fecha: 'ayer', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       {
@@ -149,7 +149,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 150, y: 640 },
+    posicion: { latitud: -33.455153, longitud: -70.665221 },
     seguimiento: [
       { estado: 'recibido', fecha: '3 nov', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: '5 nov', detalle: '9 vecinos lo confirmaron', ocurrio: true },
@@ -181,7 +181,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.hernan,
     esMio: false,
     tieneFoto: true,
-    posicion: { x: 120, y: 314 },
+    posicion: { latitud: -33.450566, longitud: -70.666394 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 1 día', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hoy', detalle: '8 vecinos lo confirmaron', ocurrio: true },
@@ -209,7 +209,7 @@ export const reportesIniciales: Reporte[] = [
     autor: null,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 96, y: 336 },
+    posicion: { latitud: -33.450875, longitud: -70.667332 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 3 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', detalle: 'En revisión por moderación', ocurrio: false },
@@ -231,7 +231,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.tomas,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 212, y: 250 },
+    posicion: { latitud: -33.449665, longitud: -70.662796 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 41 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hace 39 días', detalle: '6 vecinos lo confirmaron', ocurrio: true },
@@ -253,7 +253,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.marta,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 300, y: 470 },
+    posicion: { latitud: -33.452761, longitud: -70.659355 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 2 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', detalle: 'Cuando otros vecinos confirmen que existe', ocurrio: false },
@@ -275,7 +275,7 @@ export const reportesIniciales: Reporte[] = [
     autor: personas.camila,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 196, y: 596 },
+    posicion: { latitud: -33.454534, longitud: -70.663422 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 20 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hace 18 días', detalle: '7 vecinos lo confirmaron', ocurrio: true },

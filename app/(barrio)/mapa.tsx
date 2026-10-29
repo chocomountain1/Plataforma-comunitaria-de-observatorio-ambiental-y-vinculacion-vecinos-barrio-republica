@@ -25,7 +25,7 @@ const filtros = ['Todo', 'Reportes', 'Propuestas', 'Actividades'] as const;
 type Filtro = (typeof filtros)[number];
 
 /** Donde esta parada la persona dentro del plano. */
-const UBICACION_PROPIA = { x: 239, y: 519 };
+const UBICACION_PROPIA = { latitud: -33.453450, longitud: -70.661741 };
 
 /**
  * 2.2 Mapa del barrio.
@@ -105,13 +105,13 @@ export default function Mapa() {
               icono="patrimonio"
               color={categorias.patrimonio.color}
               accesibilidad="Patrimonio: casona del catastro 2022"
-              posicion={ubicar({ x: 256, y: 400 }, 40)}
+              posicion={ubicar({ latitud: -33.451776, longitud: -70.661076 }, 40)}
               onPress={() => router.push('/mapa/ficha')}
             />
 
             <GrupoDeMarcadores
               cantidad={5}
-              posicion={ubicar({ x: 120, y: 314 }, 48)}
+              posicion={ubicar({ latitud: -33.450566, longitud: -70.666394 }, 48)}
               onPress={() => setSeleccionado('contenedor-grajales')}
             />
           </>

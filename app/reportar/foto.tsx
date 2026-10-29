@@ -1,6 +1,5 @@
 import * as SelectorDeImagen from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Image, View } from 'react-native';
 
 import { ChipDeCategoria } from '@/componentes/app';
@@ -17,11 +16,9 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
+import { MAXIMO_DE_FOTOS } from '@/datos/fotosDeReporte';
 import { usarBorradores } from '@/estado/borradores';
 import { crearVolver } from '@/utiles/navegacion';
-
-/** El diseno permite hasta tres fotografias por reporte. */
-const MAXIMO_DE_FOTOS = 3;
 
 /**
  * 3.2 Foto.
@@ -32,7 +29,10 @@ const MAXIMO_DE_FOTOS = 3;
 export default function PasoFoto() {
   const volver = crearVolver('/reportar/categoria');
   const { reporte, cambiarReporte } = usarBorradores();
-  const [imagenes, setImagenes] = useState<string[]>([]);
+  // Las fotos viven en el borrador y no aqui: antes se guardaban en esta
+  // pantalla y se perdian al avanzar, de modo que al publicar solo viajaba
+  // cuantas eran.
+  const imagenes = reporte.imagenes;
 
   async function elegirFoto(desde: 'camara' | 'galeria') {
     const permiso =
@@ -50,8 +50,7 @@ export default function PasoFoto() {
     if (elegida === undefined) return;
 
     const siguientes = [...imagenes, elegida.uri].slice(0, MAXIMO_DE_FOTOS);
-    setImagenes(siguientes);
-    cambiarReporte({ fotos: siguientes.length });
+    cambiarReporte({ imagenes: siguientes });
   }
 
   return (

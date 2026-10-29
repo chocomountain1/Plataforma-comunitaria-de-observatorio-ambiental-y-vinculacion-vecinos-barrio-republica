@@ -12,6 +12,7 @@ import { actividadesIniciales } from '@/datos/actividades';
 import { avisosIniciales } from '@/datos/avisos';
 import { capasIniciales } from '@/datos/catastro';
 import { hayBackend } from '@/datos/cliente';
+import { subirFotosDeReporte } from '@/datos/fotosDeReporte';
 import { personas } from '@/datos/personas';
 import { propuestasIniciales } from '@/datos/propuestas';
 import { reportesIniciales } from '@/datos/reportes';
@@ -53,6 +54,8 @@ export type DatosDeReporteNuevo = {
   tieneFoto: boolean;
   anonimo: boolean;
   posicion: PuntoEnMapa;
+  /** Rutas locales de las fotos elegidas, que se suben tras publicar. */
+  imagenes: string[];
 };
 
 export type DatosDePropuestaNueva = {
@@ -276,6 +279,11 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         lista.map((cada) => (cada.id === id ? { ...cada, id: idReal } : cada)),
       );
       setUltimoReportePublicado((actual) => (actual === id ? idReal : actual));
+
+      // Las fotos se suben despues y no antes porque la ruta de cada archivo
+      // lleva el identificador del reporte, que es lo que permite a las
+      // politicas del deposito comprobar que quien sube es la autora.
+      await subirFotosDeReporte(idReal, datos.imagenes);
     });
 
     return id;

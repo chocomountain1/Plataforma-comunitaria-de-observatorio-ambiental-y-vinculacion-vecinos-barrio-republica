@@ -25,6 +25,8 @@ import {
 import type { IdCategoria } from '@/dominio/categorias';
 import type { IdEstado } from '@/dominio/estados';
 import { estados } from '@/dominio/estados';
+import { usarSesion } from './sesion';
+
 import type {
   Actividad,
   Aviso,
@@ -127,6 +129,12 @@ function nuevoId(prefijo: string): string {
 }
 
 export function ProveedorBarrio({ children }: { children: ReactNode }) {
+  // Quien publica es quien tiene la sesion abierta. Sin backend el contexto
+  // de sesion entrega la vecina de ejemplo, de modo que el prototipo sigue
+  // siendo navegable para mostrarlo.
+  const { persona } = usarSesion();
+  const autor = persona ?? personas.rosa;
+
   const [reportes, setReportes] = useState<Reporte[]>(reportesIniciales);
   const [propuestas, setPropuestas] = useState<Propuesta[]>(propuestasIniciales);
   const [actividades, setActividades] = useState<Actividad[]>(actividadesIniciales);
@@ -235,7 +243,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       resumen: 'Enviado recién',
       confirmaciones: 0,
       anonimo: datos.anonimo,
-      autor: datos.anonimo ? null : personas.rosa,
+      autor: datos.anonimo ? null : autor,
       esMio: true,
       tieneFoto: datos.tieneFoto,
       // El punto queda donde la persona dejo el mapa en el paso de ubicacion.
@@ -287,7 +295,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     });
 
     return id;
-  }, [sincronizar]);
+  }, [autor, sincronizar]);
 
   const cambiarUnaPropuesta = useCallback(
     (id: string, transformar: (propuesta: Propuesta) => Propuesta) => {
@@ -311,7 +319,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     (id: string, texto: string, postura: PosturaComentario) => {
       const comentario: Comentario = {
         id: nuevoId('comentario'),
-        autor: personas.rosa,
+        autor,
         cuando: 'recién',
         postura,
         texto,
@@ -323,7 +331,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         comentarios: [...propuesta.comentarios, comentario],
       }));
     },
-    [cambiarUnaPropuesta],
+    [autor, cambiarUnaPropuesta],
   );
 
   const marcarComentarioUtil = useCallback(
@@ -347,7 +355,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       titulo: datos.titulo,
       eje: datos.eje,
       etapa: 'idea',
-      autor: personas.rosa,
+      autor,
       publicada: 'publicada recién',
       idea: datos.idea,
       apoyos: 1,
@@ -369,7 +377,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     };
     setPropuestas((lista) => [propuesta, ...lista]);
     return id;
-  }, []);
+  }, [autor]);
 
   const inscribirseEnActividad = useCallback(
     (id: string, modo: ModoDeParticipar, tarea?: string) => {

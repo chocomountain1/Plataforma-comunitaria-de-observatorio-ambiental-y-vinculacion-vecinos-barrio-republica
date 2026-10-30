@@ -143,20 +143,6 @@ export default function Bienvenida() {
               tamanoDeTexto={17}
               onPress={() => router.push('/ingreso/cuenta')}
             />
-            <Presionable
-              onPress={() => router.push('/reportar/categoria')}
-              accessibilityRole="button"
-              accessibilityLabel="Solo quiero reportar algo ahora"
-              style={{ minHeight: alturaTocable.minima, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Texto
-                tamano={16}
-                color={colores.textoTenueSobreBosque}
-                style={{ textDecorationLine: 'underline' }}
-              >
-                Solo quiero reportar algo ahora
-              </Texto>
-            </Presionable>
           </Columna>
         </Columna>
       </Columna>

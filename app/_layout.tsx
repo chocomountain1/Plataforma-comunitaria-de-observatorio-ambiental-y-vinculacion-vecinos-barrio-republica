@@ -11,6 +11,7 @@ import { archivosDeFuente } from '@/diseno/tipografia';
 import { ProveedorBarrio } from '@/estado/barrio';
 import { ProveedorBorradores } from '@/estado/borradores';
 import { ProveedorPreferencias } from '@/estado/preferencias';
+import { ProveedorSesion } from '@/estado/sesion';
 
 // La pantalla de carga se mantiene hasta que las dos tipografias esten listas.
 // Si se deja pasar antes, el primer cuadro se dibuja con la letra del sistema y
@@ -34,7 +35,8 @@ export default function DisposicionRaiz() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ProveedorPreferencias>
-          <ProveedorBarrio>
+          <ProveedorSesion>
+            <ProveedorBarrio>
             <ProveedorBorradores>
               <StatusBar style="auto" />
               <Stack
@@ -65,7 +67,8 @@ export default function DisposicionRaiz() {
                 <Stack.Screen name="reportar/enviado" options={{ animation: 'fade' }} />
               </Stack>
             </ProveedorBorradores>
-          </ProveedorBarrio>
+            </ProveedorBarrio>
+          </ProveedorSesion>
         </ProveedorPreferencias>
       </SafeAreaProvider>
     </GestureHandlerRootView>

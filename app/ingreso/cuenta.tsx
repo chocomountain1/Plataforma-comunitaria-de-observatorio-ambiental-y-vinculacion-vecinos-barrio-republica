@@ -17,22 +17,49 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio } from '@/diseno/medidas';
+import { usarSesion } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /**
- * 1.4 Perfil opcional sin contrasena.
+ * 1.4 Crear la cuenta.
  *
- * El registro es la barrera de adopcion que mas aparecio en terreno, asi que
- * aqui no se pide nombre real ni RUT, no hay contrasenas y siempre queda la
- * salida de seguir sin cuenta.
+ * Desde el 19 de octubre la cuenta es obligatoria para entrar, porque sin
+ * ella cualquiera podria crearse varias identidades e inflar la priorizacion
+ * comunitaria. Lo que se conserva de la version anterior es lo que el terreno
+ * pidio: no se pide nombre real ni RUT, y no hay contrasenas, porque la
+ * friccion del registro fue la barrera de abandono mas mencionada y el Banco
+ * del Tiempo murio en parte por no tener recuperacion de contrasenas.
+ *
+ * El seudonimo se pide aqui pero se guarda despues de confirmar el codigo:
+ * crear el perfil exige una sesion abierta.
  */
 export default function Cuenta() {
   const volver = crearVolver('/ingreso/intereses');
-  const [seudonimo, setSeudonimo] = useState('Rosa');
+  const { pedirCodigo } = usarSesion();
+  const [seudonimo, setSeudonimo] = useState('');
   const [correo, setCorreo] = useState('');
-  const [aceptaNormas, setAceptaNormas] = useState(true);
+  const [aceptaNormas, setAceptaNormas] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const puedeEnviar = seudonimo.trim().length > 0 && correo.includes('@') && aceptaNormas;
+  const puedeEnviar =
+    seudonimo.trim().length >= 2 && correo.includes('@') && aceptaNormas && !enviando;
+
+  async function enviar() {
+    setEnviando(true);
+    setError(null);
+    try {
+      await pedirCodigo(correo);
+      router.push({
+        pathname: '/ingreso/codigo',
+        params: { correo: correo.trim().toLowerCase(), seudonimo: seudonimo.trim() },
+      });
+    } catch (falla: unknown) {
+      setError(falla instanceof Error ? falla.message : 'No se pudo enviar el código');
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <Pantalla>
@@ -50,9 +77,9 @@ export default function Cuenta() {
           contentContainerStyle={{ paddingBottom: espacio.seccion }}
         >
           <Columna separacion={espacio.normal} style={{ paddingHorizontal: espacio.bloque }}>
-            <Etiqueta texto="Opcional" fondo={colores.menta} color={colores.verde} alto={30} tamanoDeTexto={13.5} />
+            <Etiqueta texto="Paso final" fondo={colores.menta} color={colores.verde} alto={30} tamanoDeTexto={13.5} />
             <Texto tamano={32} familia="titulo" interlineado={1.08}>
-              Crea tu perfil para recibir avisos
+              Crea tu cuenta del barrio
             </Texto>
             <Texto tamano={17} color={colores.grisTexto} interlineado={1.45}>
               Te avisamos cuando tu reporte avance. No pedimos tu nombre real ni tu RUT.
@@ -100,23 +127,24 @@ export default function Cuenta() {
       </KeyboardAvoidingView>
 
       <BarraInferior>
+        {error === null ? null : (
+          <Aviso tono="cuidado">
+            <Texto tamano={15} interlineado={1.4}>
+              {error}
+            </Texto>
+          </Aviso>
+        )}
         <Boton
-          texto="Enviarme el código"
+          texto={enviando ? 'Enviando...' : 'Enviarme el código'}
           icono="sobre"
           alto={56}
           tamanoDeTexto={18}
           deshabilitado={!puedeEnviar}
-          onPress={() => router.replace('/inicio')}
+          onPress={() => void enviar()}
           vibrar
         />
-        <Boton
-          texto="Seguir sin cuenta"
-          variante="secundaria"
-          tamanoDeTexto={17}
-          onPress={() => router.replace('/inicio')}
-        />
         <Texto tamano={14} color={colores.grisTexto} alineacion="center">
-          Sin cuenta igual puedes reportar y mirar el mapa.
+          Llega en unos segundos. Revisa también el correo no deseado.
         </Texto>
       </BarraInferior>
     </Pantalla>

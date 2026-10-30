@@ -7,6 +7,13 @@ import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { familias } from '@/diseno/tipografia';
 import { usarPreferencias } from '@/estado/preferencias';
 
+/** Cada tipo de dato pide su teclado: el codigo de ingreso son solo numeros. */
+const teclados = {
+  texto: 'default',
+  correo: 'email-address',
+  numero: 'number-pad',
+} as const;
+
 type PropsCampoTexto = {
   valor: string;
   onCambiar: (valor: string) => void;
@@ -17,7 +24,7 @@ type PropsCampoTexto = {
   /** Un campo de varias lineas crece segun las filas pedidas. */
   lineas?: number;
   maximoDeCaracteres?: number;
-  tipoDeTeclado?: 'texto' | 'correo';
+  tipoDeTeclado?: 'texto' | 'correo' | 'numero';
   autoenfocar?: boolean;
 };
 
@@ -59,8 +66,8 @@ export function CampoTexto({
         maxLength={maximoDeCaracteres}
         autoFocus={autoenfocar}
         allowFontScaling={false}
-        keyboardType={tipoDeTeclado === 'correo' ? 'email-address' : 'default'}
-        autoCapitalize={tipoDeTeclado === 'correo' ? 'none' : 'sentences'}
+        keyboardType={teclados[tipoDeTeclado]}
+        autoCapitalize={tipoDeTeclado === 'texto' ? 'sentences' : 'none'}
         accessibilityLabel={etiqueta ?? marcaDeAgua}
         style={{
           borderRadius: radio.boton,

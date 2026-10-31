@@ -1,6 +1,10 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
+import { CENTRO_DEL_BARRIO } from '@/dominio/barrio';
 import type { IdCategoria } from '@/dominio/categorias';
+import type { PuntoEnMapa } from '@/dominio/tipos';
+
+import { usarPreferencias } from './preferencias';
 
 /**
  * Lo que la persona lleva escrito en los flujos de varios pasos.
@@ -19,6 +23,8 @@ export type BorradorDeReporte = {
   desdeCuando: string | null;
   descripcion: string;
   anonimo: boolean;
+  /** Donde quedo el punto al terminar el paso de ubicacion. */
+  posicion: PuntoEnMapa;
   /** Reporte parecido que se encontro cerca, si lo hubo. */
   posibleDuplicado: string | null;
 };
@@ -31,6 +37,9 @@ const reporteVacio: BorradorDeReporte = {
   desdeCuando: null,
   descripcion: '',
   anonimo: false,
+  // Arranca al centro del barrio, que es donde el mapa abre el paso de
+  // ubicacion. Si la persona no mueve el mapa, ese es el punto que vale.
+  posicion: CENTRO_DEL_BARRIO,
   posibleDuplicado: null,
 };
 
@@ -67,16 +76,27 @@ type ContextoBorradores = {
 const Contexto = createContext<ContextoBorradores | null>(null);
 
 export function ProveedorBorradores({ children }: { children: ReactNode }) {
-  const [reporte, setReporte] = useState<BorradorDeReporte>(reporteVacio);
+  // El ajuste del perfil solo decide con que valor arranca el borrador. La
+  // decision de publicar sin mostrar autor se toma en cada reporte, en el paso
+  // de revision, que es donde la persona ve lo que esta por publicar.
+  const { proponerAnonimo } = usarPreferencias();
+
+  const [reporte, setReporte] = useState<BorradorDeReporte>({
+    ...reporteVacio,
+    anonimo: proponerAnonimo,
+  });
   const [propuesta, setPropuesta] = useState<BorradorDePropuesta>(propuestaVacia);
 
   const cambiarReporte = useCallback((cambios: Partial<BorradorDeReporte>) => {
     setReporte((actual) => ({ ...actual, ...cambios }));
   }, []);
 
-  const reiniciarReporte = useCallback((origen?: Partial<BorradorDeReporte>) => {
-    setReporte({ ...reporteVacio, ...origen });
-  }, []);
+  const reiniciarReporte = useCallback(
+    (origen?: Partial<BorradorDeReporte>) => {
+      setReporte({ ...reporteVacio, anonimo: proponerAnonimo, ...origen });
+    },
+    [proponerAnonimo],
+  );
 
   const cambiarPropuesta = useCallback((cambios: Partial<BorradorDePropuesta>) => {
     setPropuesta((actual) => ({ ...actual, ...cambios }));

@@ -33,6 +33,6 @@ export const fichasDeCatastro: ElementoDeCatastro[] = [
     ultimaRevision: 'Feb 2023',
     opcionesDeEstado: ['Con jardín', 'Abandonada', 'Pavimentada', 'No sé'],
     dato: 'Solo 13 de 500 platabandas tienen quien las cuide',
-    posicion: { x: 256, y: 400 },
+    posicion: { latitud: -33.451776, longitud: -70.661076 },
   },
 ];

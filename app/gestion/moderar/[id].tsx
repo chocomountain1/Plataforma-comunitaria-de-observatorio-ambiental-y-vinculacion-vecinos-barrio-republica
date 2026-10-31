@@ -105,7 +105,7 @@ export default function RevisarReporte() {
           {reporte.titulo}
         </Texto>
         <Texto tamano={14} color={colores.grisTexto}>
-          {reporte.autor === null ? 'Publicado como anónimo' : `Publicado por ${reporte.autor.nombre}`}
+          {reporte.anonimo ? 'Publicado como anónimo' : `Publicado por ${reporte.autor?.nombre}`}
         </Texto>
         {reporte.descripcion === undefined ? null : (
           <Texto tamano={15.5} interlineado={1.4}>

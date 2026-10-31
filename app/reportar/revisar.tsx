@@ -55,6 +55,7 @@ export default function PasoRevisar() {
       desdeCuando: reporte.desdeCuando ?? undefined,
       tieneFoto: reporte.fotos > 0,
       anonimo: reporte.anonimo,
+      posicion: reporte.posicion,
     });
     reiniciarReporte();
     router.replace('/reportar/enviado');

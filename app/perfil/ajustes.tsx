@@ -39,7 +39,6 @@ export default function Ajustes() {
   const preferencias = usarPreferencias();
   const [resumenSemanal, setResumenSemanal] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(true);
-  const [siempreAnonimo, setSiempreAnonimo] = useState(false);
 
   return (
     <Pantalla>
@@ -197,12 +196,13 @@ export default function Ajustes() {
             }
           />
           <FilaDeLista
-            titulo="Reportar siempre como anónimo"
+            titulo="Partir en anónimo al reportar"
+            detalle="Lo decides en cada reporte, antes de publicarlo"
             control={
               <Interruptor
-                activo={siempreAnonimo}
-                onCambiar={setSiempreAnonimo}
-                accesibilidad="Reportar siempre como anónimo"
+                activo={preferencias.proponerAnonimo}
+                onCambiar={(activo) => preferencias.cambiar('proponerAnonimo', activo)}
+                accesibilidad="Partir en anónimo al reportar"
               />
             }
           />

@@ -70,7 +70,7 @@ nativas.
 | Funciones de registro y consulta | Aplicadas y probadas contra la base |
 | Almacenamiento de imágenes | Depósito privado y políticas aplicadas |
 | Capas del catastro 2022 | 903 elementos cargados en ocho capas |
-| Sesión y cuentas | Ingreso por código al correo, con envío propio |
+| Sesión y cuentas | Ingreso por código al correo, probado de punta a punta |
 
 Las políticas de fila se escriben contra `auth.uid()`, de modo que sin sesión
 la aplicación no puede leer ni escribir nada. Eso es lo que hacía que el
@@ -162,7 +162,7 @@ src/
   utiles/                 Ayudas sueltas
 
 basedatos/
-  migraciones/            Los nueve archivos SQL, en el orden en que se aplican
+  migraciones/            Los once archivos SQL, en el orden en que se aplican
   carga/                  Preparación y validación del catastro 2022
   modelo-de-datos.md      Por qué cada tabla y cada política son así
   ingreso-por-correo.md   Cómo se manda el código y qué falta para abrirlo

@@ -14,11 +14,11 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import { espacio } from '@/diseno/medidas';
 import { usarBarrio } from '@/estado/barrio';
 import { usarBorradores } from '@/estado/borradores';
+import { usarQuienEntro } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /**
@@ -32,6 +32,7 @@ export default function RevisarPropuesta() {
   const volver = crearVolver('/propuestas/nueva/necesita');
   const { propuesta, reiniciarPropuesta } = usarBorradores();
   const { publicarPropuesta } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   function publicar() {
     const id = publicarPropuesta({
@@ -79,13 +80,13 @@ export default function RevisarPropuesta() {
             {propuesta.titulo}
           </Texto>
           <Fila separacion={espacio.comodo}>
-            <Avatar persona={personas.rosa} tamano={36} />
+            <Avatar persona={quienEntro} tamano={36} />
             <Columna crecer={1}>
               <Texto tamano={15} peso="fuerte">
-                {personas.rosa.nombre}
+                {quienEntro.nombre}
               </Texto>
               <Texto tamano={13.5} color={colores.grisTexto}>
-                {personas.rosa.vinculo}
+                {quienEntro.vinculo}
               </Texto>
             </Columna>
           </Fila>

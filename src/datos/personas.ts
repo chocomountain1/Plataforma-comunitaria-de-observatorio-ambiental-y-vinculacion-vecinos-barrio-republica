@@ -22,4 +22,4 @@ export const personas = {
 } satisfies Record<string, Persona>;
 
 /** La persona que usa la aplicacion durante la demostracion. */
-export const personaActual: Persona = personas.rosa;
+

@@ -8,9 +8,17 @@ import type { NombreIcono } from '@/diseno/iconos';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { usarPreferencias } from '@/estado/preferencias';
 
-/** Las tres promesas de la aplicacion, en el orden del mockup. */
+/**
+ * Las tres promesas de la aplicacion, en el orden del mockup.
+ *
+ * La primera decia "sin crear cuenta", que era cierto hasta el 19 de octubre.
+ * Desde que la cuenta es obligatoria, dejarla asi seria prometer algo que la
+ * pantalla siguiente desmiente. Lo que se conserva es la promesa de fondo, que
+ * es la rapidez, porque la barrera que aparecio en terreno era el tiempo del
+ * registro y no el registro en si.
+ */
 const promesas: { icono: NombreIcono; texto: string }[] = [
-  { icono: 'pin', texto: 'Reporta en un minuto, sin crear cuenta' },
+  { icono: 'pin', texto: 'Reporta en un minuto, sin contraseñas' },
   { icono: 'visto', texto: 'Mira en qué va cada reporte' },
   { icono: 'personas', texto: 'Propón soluciones con tus vecinos' },
 ];
@@ -18,9 +26,11 @@ const promesas: { icono: NombreIcono; texto: string }[] = [
 /**
  * 1.1 Bienvenida.
  *
- * La primera pantalla ya ofrece reportar sin cuenta, porque el levantamiento en
- * terreno mostro que la friccion del registro es la principal barrera de
- * adopcion declarada por los vecinos.
+ * Es la unica pantalla, junto con el registro, a la que se llega sin haber
+ * entrado. La friccion del registro fue la principal barrera de adopcion
+ * declarada en terreno, y la respuesta a eso no es saltarse la cuenta, que la
+ * contraparte descarto el 19 de octubre, sino que crearla cueste un correo y
+ * un codigo de seis numeros.
  */
 export default function Bienvenida() {
   const { menosAnimaciones, rotarTamanoDeTexto, factorTexto } = usarPreferencias();

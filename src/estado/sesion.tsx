@@ -116,6 +116,18 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
 }
 
+/**
+ * Quien entro, para las pantallas que muestran su nombre o su avatar.
+ *
+ * El respaldo al vecino de ejemplo es el mismo que usa el proveedor cuando no
+ * hay credenciales: asi el prototipo sigue siendo navegable para mostrarlo en
+ * reuniones. Con backend configurado, estas pantallas van detras del ingreso y
+ * la persona nunca es nula.
+ */
+export function usarQuienEntro(): Persona {
+  return usarSesion().persona ?? personas.rosa;
+}
+
 export function usarSesion(): ContextoSesion {
   const contexto = useContext(Contexto);
   if (contexto === null) {

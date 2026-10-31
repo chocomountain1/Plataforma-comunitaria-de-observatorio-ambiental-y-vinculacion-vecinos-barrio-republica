@@ -16,13 +16,13 @@ import {
   Presionable,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import type { NombreIcono } from '@/diseno/iconos';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { categorias } from '@/dominio/categorias';
 import { usarBarrio } from '@/estado/barrio';
 import { usarBorradores } from '@/estado/borradores';
+import { usarQuienEntro } from '@/estado/sesion';
 import { pluralizar } from '@/utiles/texto';
 import { crearVolver } from '@/utiles/navegacion';
 
@@ -40,6 +40,7 @@ export default function PasoRevisar() {
   const volver = crearVolver('/reportar/detalles');
   const { reporte, cambiarReporte, reiniciarReporte } = usarBorradores();
   const { publicarReporte } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   const categoria = reporte.categoria === null ? undefined : categorias[reporte.categoria];
   const detalles = [reporte.comoSeFormo, reporte.desdeCuando?.toLowerCase()]
@@ -130,7 +131,7 @@ export default function PasoRevisar() {
           </Texto>
           <Fila separacion={espacio.normal} alinear="stretch">
             <Opcion
-              texto={personas.rosa.nombre}
+              texto={quienEntro.nombre}
               seleccion="unica"
               activa={!reporte.anonimo}
               onPress={() => cambiarReporte({ anonimo: false })}

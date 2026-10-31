@@ -18,6 +18,7 @@ import {
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
 import { usarPreferencias, type FactorTexto } from '@/estado/preferencias';
+import { usarSesion } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /** Nombre y tamano de muestra de cada escalon de letra. */
@@ -37,8 +38,18 @@ const tamanosDeLetra: { factor: FactorTexto; nombre: string; muestra: number }[]
 export default function Ajustes() {
   const volver = crearVolver('/perfil');
   const preferencias = usarPreferencias();
+  const { cerrarSesion } = usarSesion();
   const [resumenSemanal, setResumenSemanal] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(true);
+
+  // Mientras no existia el ingreso, esto solo volvia a la bienvenida. Ahora hay
+  // una sesion guardada en el telefono y hay que cerrarla de verdad: en un
+  // telefono prestado, que es algo que aparecio en terreno, lo contrario deja
+  // la cuenta abierta para el siguiente.
+  async function salir() {
+    await cerrarSesion();
+    router.replace('/');
+  }
 
   return (
     <Pantalla>
@@ -232,7 +243,7 @@ export default function Ajustes() {
         </ListaAgrupada>
 
         <View>
-          <FilaDeLista titulo="Cerrar sesión" ultima onPress={() => router.replace('/')} />
+          <FilaDeLista titulo="Cerrar sesión" ultima onPress={() => void salir()} />
         </View>
       </ScrollView>
     </Pantalla>

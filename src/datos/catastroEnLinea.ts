@@ -73,17 +73,24 @@ export async function elementosEnRecuadro(
   });
 }
 
-/** Cuantos elementos cargados tiene cada capa, para el detalle de la lista. */
+/**
+ * Cuantos elementos cargados tiene cada capa, para el detalle de la lista.
+ *
+ * Cuenta lo que hay y no lo que el diagnostico declaro. Son cifras distintas:
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
+ * kilometros del barrio y la carga lo rechazo. Un numero en pantalla que no
+ * corresponde a lo que se puede tocar en el mapa es peor que no mostrarlo.
+ */
 export async function conteoPorCapa(): Promise<Record<string, number>> {
   const { data, error } = await exigirCliente()
-    .from('capas_del_catastro')
-    .select('id, elementos_esperados');
+    .from('conteo_de_capas')
+    .select('capa, elementos');
 
   if (error !== null) throw new Error(error.message);
 
   const conteo: Record<string, number> = {};
-  for (const fila of (data ?? []) as { id: string; elementos_esperados: number }[]) {
-    conteo[fila.id] = fila.elementos_esperados;
+  for (const fila of (data ?? []) as { capa: string; elementos: number }[]) {
+    conteo[fila.capa] = fila.elementos;
   }
   return conteo;
 }

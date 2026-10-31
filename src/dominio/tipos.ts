@@ -242,6 +242,12 @@ export type CapaDelMapa = {
   id: string;
   nombre: string;
   detalle: string;
+  /**
+   * Con que se cuentan los elementos de esta capa: puntos, franjas, tramos.
+   * Solo las capas del catastro la tienen, y es lo que permite rehacer el
+   * detalle con el conteo real cuando hay sesion.
+   */
+  unidad?: string;
   grupo: 'ahora' | 'catastro';
   activa: boolean;
 };

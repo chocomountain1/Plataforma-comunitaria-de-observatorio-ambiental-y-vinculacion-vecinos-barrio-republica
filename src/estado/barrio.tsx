@@ -11,6 +11,7 @@ import {
 import { actividadesIniciales } from '@/datos/actividades';
 import { avisosIniciales } from '@/datos/avisos';
 import { capasIniciales } from '@/datos/catastro';
+import { conteoPorCapa } from '@/datos/catastroEnLinea';
 import { hayBackend } from '@/datos/cliente';
 import { subirFotosDeReporte } from '@/datos/fotosDeReporte';
 import { personas } from '@/datos/personas';
@@ -177,6 +178,24 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         );
       });
   }, []);
+
+  // El detalle de cada capa del catastro dice cuantos elementos tiene, y hasta
+  // ahora esa cifra venia escrita en la lista de ejemplo. No es la misma que
+  // la cargada, asi que con sesion abierta se reemplaza por lo que hay. Las
+  // tablas del catastro exigen cuenta, de ahi que dependa de la persona.
+  useEffect(() => {
+    if (!hayBackend || persona === null) return;
+    sincronizar(async () => {
+      const conteo = await conteoPorCapa();
+      setCapas((lista) =>
+        lista.map((capa) => {
+          const cuantos = conteo[capa.id];
+          if (capa.unidad === undefined || cuantos === undefined) return capa;
+          return { ...capa, detalle: `${cuantos} ${capa.unidad}` };
+        }),
+      );
+    });
+  }, [persona, sincronizar]);
 
   const cambiarUnReporte = useCallback(
     (id: string, transformar: (reporte: Reporte) => Reporte) => {
@@ -459,7 +478,16 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const restablecerCapas = useCallback(() => setCapas(capasIniciales), []);
+  // Restablecer vuelve a las capas que vienen encendidas, y no olvida los
+  // conteos que ya se leyeron de la base.
+  const restablecerCapas = useCallback(() => {
+    setCapas((lista) =>
+      lista.map((capa) => {
+        const inicial = capasIniciales.find((otra) => otra.id === capa.id);
+        return inicial === undefined ? capa : { ...capa, activa: inicial.activa };
+      }),
+    );
+  }, []);
 
   const avisosSinLeer = useMemo(
     () => avisos.filter((aviso) => !aviso.leido).length,

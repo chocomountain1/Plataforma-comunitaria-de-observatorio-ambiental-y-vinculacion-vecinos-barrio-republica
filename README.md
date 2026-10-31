@@ -162,7 +162,7 @@ src/
   utiles/                 Ayudas sueltas
 
 basedatos/
-  migraciones/            Los trece archivos SQL, en el orden en que se aplican
+  migraciones/            Los catorce archivos SQL, en el orden en que se aplican
   carga/                  Preparación y validación del catastro 2022
   modelo-de-datos.md      Por qué cada tabla y cada política son así
   ingreso-por-correo.md   Cómo se manda el código y qué falta para abrirlo

@@ -155,6 +155,10 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
   const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
     if (!hayBackend) return;
     operacion().catch((error: unknown) => {
+      // Tambien a la consola. Guardarlo solo en el estado hacia que una falla
+      // al escribir en la base no dejara rastro en ninguna parte: la pantalla
+      // de cierre decia "Listo" y la foto nunca habia llegado.
+      console.error('No se pudo guardar en la base', error);
       setUltimoErrorDeDatos(
         error instanceof Error ? error.message : 'No se pudo guardar en la base',
       );

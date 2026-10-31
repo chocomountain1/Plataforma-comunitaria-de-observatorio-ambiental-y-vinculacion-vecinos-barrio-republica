@@ -1,0 +1,25 @@
+-- El permiso que le faltaba a la tabla de personas.
+--
+-- Las politicas de personas estan escritas desde 0004, pero sin el permiso que
+-- las habilita, y en Postgres hacen falta las dos cosas: el permiso dice si
+-- puedes tocar la tabla y la politica dice cuales filas. Con uno solo de los
+-- dos, la base responde "permission denied for table personas" antes de llegar
+-- a mirar la politica.
+--
+-- Aparecio en el primer ingreso de verdad y no antes, porque hasta ahora nadie
+-- habia tenido sesion: el codigo al correo se canjeaba bien y el paso
+-- siguiente, leer el propio perfil, se caia. Es el tercer choque del mismo tipo
+-- en este esquema, y los tres se vieron ejecutando, no leyendo.
+--
+-- Las columnas no se restringen como en reportes porque aqui no hay nada
+-- reservado: el correo vive en auth.users y esta tabla solo guarda el
+-- seudonimo, que es publico por diseno.
+grant select, insert, update on personas to authenticated;
+
+-- Nota para quien siga. La politica ver_si_soy_gestor de 0004 esta en la
+-- situacion inversa y no puede aplicarse nunca, porque gestores_territoriales
+-- no tiene ningun permiso otorgado al cliente y asi tiene que quedarse: quien
+-- necesita saber si alguien es gestor llama a es_gestor(), que es security
+-- definer justamente para eso. Borrarla no abriria ni cerraria nada, solo
+-- sacaria una regla que hace creer que hay una puerta vigilada donde no hay
+-- puerta. Es una decision aparte y no se toma en esta migracion.

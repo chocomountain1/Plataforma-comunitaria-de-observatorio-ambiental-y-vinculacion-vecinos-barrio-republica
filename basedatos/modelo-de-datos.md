@@ -130,21 +130,30 @@ necesita mantención.
 | `elementos_del_catastro` | Los 2.032 elementos. **Vacía**, ver `carga/` |
 | `revisiones_del_catastro` | Lo que un vecino responde sobre el estado de hoy |
 
-## Dos cosas que solo aparecieron al aplicarlo
+## Tres cosas que solo aparecieron al aplicarlo
 
-El esquema escrito se veía correcto y no funcionaba. Las dos fallas son la
-misma: el cliente solo puede leer `reportes.id`, que es lo que impide filtrar
-al autor de un reporte anónimo, y eso rompía todo lo que necesitara leer otra
-columna de esa tabla.
+El esquema escrito se veía correcto y no funcionaba. Las dos primeras fallas
+son la misma: el cliente solo puede leer `reportes.id`, que es lo que impide
+filtrar al autor de un reporte anónimo, y eso rompía todo lo que necesitara
+leer otra columna de esa tabla.
 
 | Qué fallaba | Por qué | Cómo se resolvió |
 |---|---|---|
 | `confirmar_reporte` | Copia `reportes.autor` a la tabla de confirmaciones | Pasa a `security definer`. No abre un hueco: quien confirma lo fija la función con `auth.uid()`, y las dos reglas son restricciones de la tabla |
 | Leer el seguimiento y los comentarios | Sus políticas miraban `reportes.oculto` con una subconsulta, que corre con los permisos de quien consulta | Se encapsula en `reporte_visible()`, que corre como dueña |
+| Leer y crear el propio perfil | `personas` tenía políticas pero ningún permiso otorgado, y hacen falta los dos: el permiso dice si puedes tocar la tabla y la política dice cuáles filas | `grant select, insert, update on personas to authenticated`, en la migración 0011 |
 
-La salida fácil en ambos casos era abrir la columna del autor, que es
-exactamente lo que el modelo no puede hacer. El mismo patrón se repitió
+La salida fácil en los dos primeros casos era abrir la columna del autor, que
+es exactamente lo que el modelo no puede hacer. El mismo patrón se repitió
 después en `reporte_es_mio()`, para las fotos.
+
+El tercero es de otra familia y vale anotarlo aparte: no se vio al escribir el
+esquema ni al probarlo con sesiones simuladas, sino en el primer ingreso real,
+porque hasta entonces nadie había tenido cuenta. Una política sin permiso no
+avisa que está incompleta: la base responde `permission denied` sin llegar a
+mirarla. Conviene revisar que cada tabla con políticas tenga su `grant`, que es
+lo que falta todavía en `gestores_territoriales`, a propósito y documentado en
+la misma migración.
 
 ## El catastro queda detrás de la cuenta
 

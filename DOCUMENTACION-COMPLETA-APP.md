@@ -11,10 +11,9 @@ recoge lo que cambió al conectarlo con Supabase y los trece archivos que se
 sumaron. El código fuente de todos los capítulos está actualizado al 31 de
 octubre.
 
-**Propósito de este documento.** Está escrito para que una persona o un modelo
-de lenguaje que nunca vio el proyecto pueda reconstruirlo exactamente igual.
-Todo lo que define el comportamiento está aquí: no hay decisiones implícitas ni
-archivos omitidos.
+**Propósito de este documento.** Está escrito para que alguien que nunca vio
+el proyecto pueda reconstruirlo exactamente igual. Todo lo que define el
+comportamiento está aquí: no hay decisiones implícitas ni archivos omitidos.
 
 | Campo | Valor |
 |---|---|
@@ -67,20 +66,18 @@ código.
 
 17. [Código fuente completo](#17-código-fuente-completo)
 
-### Tamaño y uso en una sesión de Claude
+### Tamaño y cómo leerlo
 
 El documento pesa unos 578 KB, repartidos así:
 
 | Parte | Capítulos | Tamaño | Para qué sirve |
 |---|---|---|---|
 | I · Comprensión | 1 a 16 | 165 KB | Entender el proyecto |
-| II · Código fuente | 17 | 413 KB | Reconstruirlo |
+| II · Código fuente | 17 y 18 | 413 KB | Reconstruirlo |
 
-Entero cabe en una sesión, pero deja poco espacio para conversar. Si hace falta
-más margen, **la Parte I por sí sola basta para entender la aplicación** y el
-capítulo 17 se puede pasar después, o solo las secciones que importen: la
-17.2 a la 17.6 son las capas de `src` sin componentes ni pantallas, y pesan
-unos 76 KB.
+**La Parte I por sí sola basta para entender la aplicación.** El código fuente
+se consulta después, o solo las secciones que importen: de la 17.2 a la 17.6
+están las capas de `src` sin componentes ni pantallas, y pesan unos 76 KB.
 
 ---
 
@@ -4029,7 +4026,7 @@ componentes base la consulten.
 ### 16.1 De dónde salieron estos valores
 
 Los mockups originales son 36 archivos `.dc.html` exportados del lienzo de
-diseño de Claude. De ellos se derivó un paquete de exportación en
+diseño. De ellos se derivó un paquete de exportación en
 `Desktop\Barrio Republica - Export Diseno` con HTML limpio, SVG, PDF, PNG y
 tokens de diseño, con **99,76 % de fidelidad media verificada píxel a píxel**.
 
@@ -5858,9 +5855,9 @@ import type { CapaDelMapa, ElementoDeCatastro } from '@/dominio/tipos';
  * ciclovia. Sirven para que el prototipo sin backend muestre algo razonable.
  *
  * Con sesion abierta se reemplazan por lo que hay cargado, que no es lo mismo:
- * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
- * kilometros del barrio. De ahi la unidad de cada capa, que es lo que permite
- * rehacer la frase con el numero de verdad.
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno queda a dos
+ * kilometros del barrio y la carga lo rechaza. De ahi la unidad de cada capa,
+ * que es lo que permite rehacer la frase con el numero de verdad.
  */
 export const capasIniciales: CapaDelMapa[] = [
   { id: 'reportes-abiertos', nombre: 'Reportes abiertos', detalle: '', grupo: 'ahora', activa: true },
@@ -6090,7 +6087,7 @@ export const plazosDeApoyo = ['Este semestre', 'Otoño 2027', 'Por definir'] as 
 
 #### `src/estado/barrio.tsx`
 
-Contenido compartido y todas las acciones que lo modifican. (577 líneas)
+Contenido compartido y todas las acciones que lo modifican. (578 líneas)
 
 ```tsx
 import {
@@ -6251,9 +6248,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
   const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
     if (!hayBackend) return;
     operacion().catch((error: unknown) => {
-      // Tambien a la consola. Guardarlo solo en el estado hacia que una falla
-      // al escribir en la base no dejara rastro en ninguna parte: la pantalla
-      // de cierre decia "Listo" y la foto nunca habia llegado.
+      // Tambien a la consola, y no solo al estado. Una falla al escribir tiene
+      // que dejar rastro en alguna parte: las pantallas de cierre anuncian
+      // exito apenas la operacion se dispara, sin esperar la respuesta.
       console.error('No se pudo guardar en la base', error);
       setUltimoErrorDeDatos(
         error instanceof Error ? error.message : 'No se pudo guardar en la base',
@@ -6274,10 +6271,11 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  // El detalle de cada capa del catastro dice cuantos elementos tiene, y hasta
-  // ahora esa cifra venia escrita en la lista de ejemplo. No es la misma que
-  // la cargada, asi que con sesion abierta se reemplaza por lo que hay. Las
-  // tablas del catastro exigen cuenta, de ahi que dependa de la persona.
+  // El detalle de cada capa del catastro dice cuantos elementos tiene. La
+  // lista de ejemplo trae la cifra que declara el diagnostico, que no coincide
+  // con la cargada, de modo que con sesion abierta se reemplaza por lo que hay
+  // en la base. Las tablas del catastro exigen cuenta, de ahi que dependa de
+  // la persona.
   useEffect(() => {
     if (!hayBackend || persona === null) return;
     sincronizar(async () => {
@@ -10327,13 +10325,13 @@ import { ProveedorSesion, usarSesion } from '@/estado/sesion';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
- * La cuenta obligatoria tiene que ser una puerta y no un camino.
+ * La cuenta obligatoria es una puerta y no un camino.
  *
- * Sin esto la obligacion solo valia mientras alguien siguiera el recorrido de
- * bienvenida: en el navegador basta escribir la direccion, y en el telefono la
- * aplicacion vuelve a abrirse donde se cerro. Quien llegara sin sesion veia el
- * barrio de ejemplo mientras la base le rechazaba todo, que es la peor de las
- * dos cosas: parece que funciona y no guarda nada.
+ * El recorrido de bienvenida no alcanza para exigirla: en el navegador basta
+ * escribir la direccion, y en el telefono la aplicacion vuelve a abrirse donde
+ * se cerro. Quien llega sin sesion veria el barrio de ejemplo mientras la base
+ * le rechaza todo, que es la peor de las dos cosas, porque parece que funciona
+ * y no guarda nada.
  */
 function Puerta({ children }: { children: ReactNode }) {
   const { estado } = usarSesion();
@@ -10346,8 +10344,8 @@ function Puerta({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Abriendo la aplicacion directo en una direccion, la sesion se resuelve
-    // antes de que el navegador exista y la redireccion se perderia en
-    // silencio, que fue justo lo que paso al probarlo.
+    // antes de que el navegador exista, y una redireccion disparada ahi se
+    // pierde en silencio.
     if (navegacion?.key === undefined) return;
     if (estado === 'cargando' || estado === 'sinBackend' || estado === 'dentro') return;
     if (enElIngreso) return;
@@ -10498,7 +10496,7 @@ export default function DisposicionDeReportar() {
 
 #### `app/index.tsx`
 
-1.1 Bienvenida. (204 líneas)
+1.1 Bienvenida. (203 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -10514,11 +10512,10 @@ import { usarPreferencias } from '@/estado/preferencias';
 /**
  * Las tres promesas de la aplicacion, en el orden del mockup.
  *
- * La primera decia "sin crear cuenta", que era cierto hasta el 19 de octubre.
- * Desde que la cuenta es obligatoria, dejarla asi seria prometer algo que la
- * pantalla siguiente desmiente. Lo que se conserva es la promesa de fondo, que
- * es la rapidez, porque la barrera que aparecio en terreno era el tiempo del
- * registro y no el registro en si.
+ * La primera promete rapidez y no ausencia de registro, porque la cuenta es
+ * obligatoria y la pantalla siguiente la pide. La barrera que aparecio en
+ * terreno era el tiempo del registro y no el registro en si, y eso es lo que
+ * la promesa tiene que responder.
  */
 const promesas: { icono: NombreIcono; texto: string }[] = [
   { icono: 'pin', texto: 'Reporta en un minuto, sin contraseñas' },
@@ -16783,7 +16780,7 @@ function Insignia({ logro }: { logro: Logro }) {
 
 #### `app/perfil/ajustes.tsx`
 
-7.3 Ajustes y accesibilidad. (251 líneas)
+7.3 Ajustes y accesibilidad. (250 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -16830,10 +16827,9 @@ export default function Ajustes() {
   const [resumenSemanal, setResumenSemanal] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(true);
 
-  // Mientras no existia el ingreso, esto solo volvia a la bienvenida. Ahora hay
-  // una sesion guardada en el telefono y hay que cerrarla de verdad: en un
-  // telefono prestado, que es algo que aparecio en terreno, lo contrario deja
-  // la cuenta abierta para el siguiente.
+  // Cierra la sesion guardada en el telefono y no solo vuelve a la bienvenida.
+  // En un telefono prestado, que es algo que aparecio en terreno, volver sin
+  // cerrar dejaria la cuenta abierta para el siguiente.
   async function salir() {
     await cerrarSesion();
     router.replace('/');
@@ -19085,9 +19081,9 @@ export async function elementosEnRecuadro(
 /**
  * Cuantos elementos cargados tiene cada capa, para el detalle de la lista.
  *
- * Cuenta lo que hay y no lo que el diagnostico declaro. Son cifras distintas:
- * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
- * kilometros del barrio y la carga lo rechazo. Un numero en pantalla que no
+ * Cuenta lo que hay y no lo que el diagnostico declara. Son cifras distintas:
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno queda a dos
+ * kilometros del barrio y la carga lo rechaza. Un numero en pantalla que no
  * corresponde a lo que se puede tocar en el mapa es peor que no mostrarlo.
  */
 export async function conteoPorCapa(): Promise<Record<string, number>> {
@@ -19367,7 +19363,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   }, []);
 
   // Devuelve el estado en vez de dejar que la pantalla lo lea del contexto,
-  // porque ahi todavia figura el de antes de entrar.
+  // donde todavia figura el de antes de entrar hasta el siguiente dibujo.
   const confirmarCodigo = useCallback(
     async (correo: string, codigo: string) => {
       await confirmarCodigoEnLinea(correo, codigo);
@@ -19828,9 +19824,9 @@ export default function CodigoDeIngreso() {
     try {
       const sesion = await confirmarCodigo(correo, codigo);
 
-      // Quien ya tiene cuenta vuelve a escribir un seudonimo en el paso
-      // anterior, pero aqui se descarta: crear el perfil de nuevo choca con el
-      // que ya existe y dejaria a la persona afuera teniendo la sesion abierta.
+      // El seudonimo del paso anterior solo se usa cuando todavia no hay perfil.
+      // Crearlo de nuevo chocaria con el que ya existe y dejaria a la persona
+      // afuera teniendo la sesion abierta y el codigo ya gastado.
       if (sesion === 'sinPerfil' && seudonimo.length > 0) {
         await crearPerfil(seudonimo, 'Vive en el barrio');
       }

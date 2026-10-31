@@ -6,7 +6,7 @@ del catastro 2022 que ya usa el prototipo, declarados como tipos enumerados.
 
 ## Estado
 
-**Las trece migraciones están aplicadas** en el proyecto `barrio-republica` de
+**Las catorce migraciones están aplicadas** en el proyecto `barrio-republica` de
 Supabase, región São Paulo, con PostGIS 3.3.7. Las capas prioritarias del
 catastro están cargadas: 903 elementos. El ingreso con cuenta funciona, y con
 él la aplicación lee y escribe de verdad contra este esquema.
@@ -31,6 +31,26 @@ Si más adelante el equipo adopta la herramienta de línea de comandos de
 Supabase, estos archivos se mudan a `supabase/migrations/`, que es la ruta que
 esa herramienta espera. Quedaron acá porque el proyecto nombra todo en español
 y porque hoy se aplican a mano.
+
+### Qué está aplicado en una base
+
+La tabla `migraciones_aplicadas` lleva una fila por archivo aplicado, con su
+fecha. Para saber qué le falta a una base, basta compararla con el contenido de
+`migraciones/`:
+
+```sql
+select archivo, aplicada_en from migraciones_aplicadas order by archivo;
+```
+
+La escribe cada migración al final de sí misma, con
+`select registrar_migracion('00XX_nombre.sql');`. No hay ningún proceso que la
+mantenga, así que **lo único que hay que recordar al escribir una migración
+nueva es cerrarla con esa línea**.
+
+La tabla no tiene permisos otorgados al cliente y tiene RLS activo, de modo que
+solo la ve quien administra la base. Volver a aplicar una migración actualiza
+la fecha en vez de fallar, porque los archivos están escritos para poder
+correrse de nuevo.
 
 ## Las tres decisiones que no son una traducción mecánica
 

@@ -9,9 +9,9 @@ import type { CapaDelMapa, ElementoDeCatastro } from '@/dominio/tipos';
  * ciclovia. Sirven para que el prototipo sin backend muestre algo razonable.
  *
  * Con sesion abierta se reemplazan por lo que hay cargado, que no es lo mismo:
- * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
- * kilometros del barrio. De ahi la unidad de cada capa, que es lo que permite
- * rehacer la frase con el numero de verdad.
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno queda a dos
+ * kilometros del barrio y la carga lo rechaza. De ahi la unidad de cada capa,
+ * que es lo que permite rehacer la frase con el numero de verdad.
  */
 export const capasIniciales: CapaDelMapa[] = [
   { id: 'reportes-abiertos', nombre: 'Reportes abiertos', detalle: '', grupo: 'ahora', activa: true },

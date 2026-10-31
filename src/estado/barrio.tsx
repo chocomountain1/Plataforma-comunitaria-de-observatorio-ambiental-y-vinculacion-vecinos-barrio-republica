@@ -156,9 +156,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
   const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
     if (!hayBackend) return;
     operacion().catch((error: unknown) => {
-      // Tambien a la consola. Guardarlo solo en el estado hacia que una falla
-      // al escribir en la base no dejara rastro en ninguna parte: la pantalla
-      // de cierre decia "Listo" y la foto nunca habia llegado.
+      // Tambien a la consola, y no solo al estado. Una falla al escribir tiene
+      // que dejar rastro en alguna parte: las pantallas de cierre anuncian
+      // exito apenas la operacion se dispara, sin esperar la respuesta.
       console.error('No se pudo guardar en la base', error);
       setUltimoErrorDeDatos(
         error instanceof Error ? error.message : 'No se pudo guardar en la base',
@@ -179,10 +179,11 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       });
   }, []);
 
-  // El detalle de cada capa del catastro dice cuantos elementos tiene, y hasta
-  // ahora esa cifra venia escrita en la lista de ejemplo. No es la misma que
-  // la cargada, asi que con sesion abierta se reemplaza por lo que hay. Las
-  // tablas del catastro exigen cuenta, de ahi que dependa de la persona.
+  // El detalle de cada capa del catastro dice cuantos elementos tiene. La
+  // lista de ejemplo trae la cifra que declara el diagnostico, que no coincide
+  // con la cargada, de modo que con sesion abierta se reemplaza por lo que hay
+  // en la base. Las tablas del catastro exigen cuenta, de ahi que dependa de
+  // la persona.
   useEffect(() => {
     if (!hayBackend || persona === null) return;
     sincronizar(async () => {

@@ -19,13 +19,13 @@ import { ProveedorSesion, usarSesion } from '@/estado/sesion';
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
- * La cuenta obligatoria tiene que ser una puerta y no un camino.
+ * La cuenta obligatoria es una puerta y no un camino.
  *
- * Sin esto la obligacion solo valia mientras alguien siguiera el recorrido de
- * bienvenida: en el navegador basta escribir la direccion, y en el telefono la
- * aplicacion vuelve a abrirse donde se cerro. Quien llegara sin sesion veia el
- * barrio de ejemplo mientras la base le rechazaba todo, que es la peor de las
- * dos cosas: parece que funciona y no guarda nada.
+ * El recorrido de bienvenida no alcanza para exigirla: en el navegador basta
+ * escribir la direccion, y en el telefono la aplicacion vuelve a abrirse donde
+ * se cerro. Quien llega sin sesion veria el barrio de ejemplo mientras la base
+ * le rechaza todo, que es la peor de las dos cosas, porque parece que funciona
+ * y no guarda nada.
  */
 function Puerta({ children }: { children: ReactNode }) {
   const { estado } = usarSesion();
@@ -38,8 +38,8 @@ function Puerta({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Abriendo la aplicacion directo en una direccion, la sesion se resuelve
-    // antes de que el navegador exista y la redireccion se perderia en
-    // silencio, que fue justo lo que paso al probarlo.
+    // antes de que el navegador exista, y una redireccion disparada ahi se
+    // pierde en silencio.
     if (navegacion?.key === undefined) return;
     if (estado === 'cargando' || estado === 'sinBackend' || estado === 'dentro') return;
     if (enElIngreso) return;

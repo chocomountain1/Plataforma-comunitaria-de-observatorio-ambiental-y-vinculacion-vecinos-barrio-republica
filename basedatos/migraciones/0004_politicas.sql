@@ -74,6 +74,31 @@ comment on view reportes_publicos is
   'Unica puerta de lectura de reportes para la aplicacion. Enmascara al autor '
   'de los reportes anonimos.';
 
+-- Si un reporte se puede ver ------------------------------------------------
+
+-- Las politicas de las tablas que cuelgan del reporte necesitan saber si ese
+-- reporte esta oculto. No pueden preguntarlo con una subconsulta: una
+-- subconsulta dentro de una politica corre con los permisos de quien consulta,
+-- y el cliente solo puede leer reportes.id, que es justamente lo que impide
+-- que el autor anonimo se filtre.
+--
+-- Encapsularlo aqui resuelve el choque sin aflojar el permiso. Se descubrio
+-- probando: con la subconsulta, leer el seguimiento de un reporte propio
+-- fallaba con permiso denegado sobre reportes.
+create or replace function reporte_visible (p_reporte uuid) returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from reportes r
+    where r.id = p_reporte and (not r.oculto or es_gestor ())
+  );
+$$;
+
+grant execute on function reporte_visible (uuid) to authenticated;
+
 -- Personas --------------------------------------------------------------------
 
 -- El seudonimo es publico por diseno: es como el barrio se reconoce.
@@ -156,13 +181,7 @@ grant select on eventos_de_seguimiento to authenticated;
 
 create policy ver_seguimiento on eventos_de_seguimiento
   for select to authenticated
-  using (
-    exists (
-      select 1 from reportes r
-      where r.id = eventos_de_seguimiento.reporte
-        and (not r.oculto or es_gestor ())
-    )
-  );
+  using (reporte_visible (reporte));
 
 -- Comentarios -----------------------------------------------------------------
 
@@ -173,12 +192,7 @@ grant select, insert, delete on utiles_de_comentario to authenticated;
 -- la contrapartida de permitir el reporte anonimo.
 create policy ver_comentarios on comentarios
   for select to authenticated
-  using (
-    exists (
-      select 1 from reportes r
-      where r.id = comentarios.reporte and not r.oculto
-    )
-  );
+  using (reporte_visible (reporte));
 
 create policy comentar on comentarios
   for insert to authenticated

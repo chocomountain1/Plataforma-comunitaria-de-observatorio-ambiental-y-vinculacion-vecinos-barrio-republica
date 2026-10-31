@@ -14,20 +14,24 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
  */
 
 const direccion = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const claveAnonima = process.env.EXPO_PUBLIC_SUPABASE_CLAVE_ANONIMA;
+
+// Clave publicable, la que Supabase reemplazo por la antigua clave anonima.
+// Viaja dentro de la aplicacion y eso es correcto: lo que protege los datos no
+// es esconderla, son las politicas de fila.
+const clavePublica = process.env.EXPO_PUBLIC_SUPABASE_CLAVE_PUBLICA;
 
 export const hayBackend: boolean =
   typeof direccion === 'string' &&
   direccion !== '' &&
-  typeof claveAnonima === 'string' &&
-  claveAnonima !== '';
+  typeof clavePublica === 'string' &&
+  clavePublica !== '';
 
 /**
  * Nulo mientras no haya credenciales. Las funciones de datos lo comprueban
  * antes de usarlo, en vez de dejar que reviente en medio de una pantalla.
  */
 export const cliente: SupabaseClient | null = hayBackend
-  ? createClient(direccion as string, claveAnonima as string, {
+  ? createClient(direccion as string, clavePublica as string, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -39,12 +43,25 @@ export const cliente: SupabaseClient | null = hayBackend
     })
   : null;
 
+/**
+ * Si hay una sesion abierta.
+ *
+ * Casi todo lo que la base expone exige cuenta, incluidas las capas del
+ * catastro. Preguntarlo antes de consultar evita disparar peticiones que la
+ * base va a rechazar mientras el ingreso por correo no exista.
+ */
+export async function haySesion(): Promise<boolean> {
+  if (cliente === null) return false;
+  const { data } = await cliente.auth.getSession();
+  return data.session !== null;
+}
+
 /** Atajo para las funciones de datos, que no pueden trabajar sin conexion. */
 export function exigirCliente(): SupabaseClient {
   if (cliente === null) {
     throw new Error(
       'No hay conexion con Supabase. Falta configurar EXPO_PUBLIC_SUPABASE_URL y ' +
-        'EXPO_PUBLIC_SUPABASE_CLAVE_ANONIMA en .env.local.',
+        'EXPO_PUBLIC_SUPABASE_CLAVE_PUBLICA en .env.local.',
     );
   }
   return cliente;

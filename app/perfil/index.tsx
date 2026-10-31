@@ -13,12 +13,12 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { logros, resumenDelPerfil, totalDeLogros } from '@/datos/perfil';
 import { colores } from '@/diseno/colores';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import type { Logro } from '@/dominio/tipos';
 import { usarBarrio } from '@/estado/barrio';
+import { usarQuienEntro } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 import { pluralizar } from '@/utiles/texto';
 
@@ -33,6 +33,7 @@ export default function Perfil() {
   const volver = crearVolver('/inicio');
   const margenes = useSafeAreaInsets();
   const { reportes, propuestas } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   const conseguidos = logros.filter((logro) => logro.conseguido).length;
   const misReportes = reportes.filter((reporte) => reporte.esMio).length;
@@ -96,12 +97,12 @@ export default function Perfil() {
               }}
             >
               <Texto tamano={30} peso="fuerte" color={colores.bosque}>
-                {personas.rosa.inicial}
+                {quienEntro.inicial}
               </Texto>
             </View>
             <Columna separacion={espacio.corto}>
               <Texto tamano={30} familia="titulo" color={colores.papel} interlineado={1}>
-                {personas.rosa.nombre}
+                {quienEntro.nombre}
               </Texto>
               <Texto tamano={14} color={colores.textoTenueSobreBosque}>
                 {resumenDelPerfil.desde}

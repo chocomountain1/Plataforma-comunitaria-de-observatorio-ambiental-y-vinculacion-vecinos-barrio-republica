@@ -32,6 +32,36 @@ export type PuntoEnMapa = {
   longitud: number;
 };
 
+/** Los cuatro bordes de lo que el mapa tiene a la vista, en grados. */
+export type RecuadroDelMapa = {
+  sur: number;
+  oeste: number;
+  norte: number;
+  este: number;
+};
+
+/**
+ * Un elemento del catastro 2022 listo para dibujar.
+ *
+ * La posicion es un punto representativo aunque la figura original sea una
+ * linea o un poligono, porque el mapa dibuja chinchetas. El area y el largo
+ * vienen calculados sobre la geometria completa, que la base conserva.
+ */
+export type ElementoEnElMapa = {
+  id: string;
+  capa: string;
+  /** Identificador que el elemento traia en el archivo del diagnostico. */
+  fid: number;
+  posicion: PuntoEnMapa;
+  tipoDeGeometria: string;
+  areaM2: number;
+  largoM: number;
+  direccion?: string;
+  estadoDePlatabanda?: string;
+  tipoDeMicrobasural?: string;
+  quienLoCuida?: string;
+};
+
 /** Un paso del recorrido de un reporte, tal como se ve en "En que va". */
 export type EventoDeSeguimiento = {
   estado: IdEstado;
@@ -212,6 +242,12 @@ export type CapaDelMapa = {
   id: string;
   nombre: string;
   detalle: string;
+  /**
+   * Con que se cuentan los elementos de esta capa: puntos, franjas, tramos.
+   * Solo las capas del catastro la tienen, y es lo que permite rehacer el
+   * detalle con el conteo real cuando hay sesion.
+   */
+  unidad?: string;
   grupo: 'ahora' | 'catastro';
   activa: boolean;
 };

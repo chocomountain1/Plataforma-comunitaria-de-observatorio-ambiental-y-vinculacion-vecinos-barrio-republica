@@ -14,12 +14,12 @@ import {
   Presionable,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
 import { idsDeEstado, estados } from '@/dominio/estados';
 import { usarBarrio } from '@/estado/barrio';
 import { usarPreferencias } from '@/estado/preferencias';
+import { usarQuienEntro } from '@/estado/sesion';
 
 /**
  * 3.7 Reporte enviado.
@@ -32,6 +32,7 @@ export default function ReporteEnviado() {
   const margenes = useSafeAreaInsets();
   const { ultimoReportePublicado } = usarBarrio();
   const { menosAnimaciones } = usarPreferencias();
+  const quienEntro = usarQuienEntro();
   const [avisosActivos, setAvisosActivos] = useState(true);
 
   const animar = !menosAnimaciones;
@@ -75,7 +76,7 @@ export default function ReporteEnviado() {
           interlineado={1.05}
           style={{ marginTop: espacio.comodo }}
         >
-          {`¡Listo, ${personas.rosa.nombre}!`}
+          {`¡Listo, ${quienEntro.nombre}!`}
         </Texto>
         <Texto
           tamano={17}

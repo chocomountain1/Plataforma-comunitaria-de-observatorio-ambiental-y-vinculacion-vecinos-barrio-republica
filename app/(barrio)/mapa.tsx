@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -15,14 +15,28 @@ import {
 import { Boton, Chip, Columna, Fila, Icono, Presionable, Texto } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio, sombras } from '@/diseno/medidas';
+import type { IdCapaDelCatastro } from '@/dominio/capas';
+import { capasDelCatastro, colorDelElemento, esCapaDelCatastro } from '@/dominio/capas';
 import { categorias } from '@/dominio/categorias';
 import { familias } from '@/diseno/tipografia';
 import { usarBarrio } from '@/estado/barrio';
+import { usarElementosDelCatastro } from '@/estado/catastro';
+import type { ElementoEnElMapa } from '@/dominio/tipos';
 import { usarPreferencias } from '@/estado/preferencias';
+import { agruparEnPantalla } from '@/utiles/agrupacion';
 
 /** Filtros del carril superior del mapa. */
 const filtros = ['Todo', 'Reportes', 'Propuestas', 'Actividades'] as const;
 type Filtro = (typeof filtros)[number];
+
+/**
+ * Lado de la celda con que se agrupan las chinchetas del catastro.
+ *
+ * Son 44 px, la misma medida minima que el sistema visual exige para una zona
+ * tocable: por debajo de eso dos chinchetas se pisan y dejan de poder tocarse
+ * por separado.
+ */
+const LADO_DE_AGRUPACION = 44;
 
 /** Donde esta parada la persona dentro del plano. */
 const UBICACION_PROPIA = { latitud: -33.453450, longitud: -70.661741 };
@@ -35,7 +49,20 @@ const UBICACION_PROPIA = { latitud: -33.453450, longitud: -70.661741 };
  * repartida entre un tablero congelado y los grupos de mensajeria.
  */
 export default function Mapa() {
-  const { reportes, propuestas, actividades, confirmarReporte } = usarBarrio();
+  const { reportes, propuestas, actividades, capas, confirmarReporte } = usarBarrio();
+
+  // Las capas del catastro no dependen de los chips de arriba, que filtran lo
+  // que pasa ahora. Se encienden y apagan en la pantalla de capas, tal como
+  // separa los dos grupos el diseno.
+  const capasEncendidas = useMemo(
+    () =>
+      capas
+        .filter((capa) => capa.grupo === 'catastro' && capa.activa)
+        .map((capa) => capa.id)
+        .filter(esCapaDelCatastro),
+    [capas],
+  );
+  const catastro = usarElementosDelCatastro(capasEncendidas);
   const { menosAnimaciones } = usarPreferencias();
   const margenes = useSafeAreaInsets();
   const [filtro, setFiltro] = useState<Filtro>('Todo');
@@ -47,7 +74,7 @@ export default function Mapa() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.mapaFondo }}>
-      <MapaBarrio>
+      <MapaBarrio alCambiarElArea={catastro.alCambiarElArea}>
         {(ubicar) => (
           <>
             <MiUbicacion posicion={ubicar(UBICACION_PROPIA, 22)} />
@@ -101,19 +128,40 @@ export default function Mapa() {
                 ))
               : null}
 
-            <MarcadorMapa
-              icono="patrimonio"
-              color={categorias.patrimonio.color}
-              accesibilidad="Patrimonio: casona del catastro 2022"
-              posicion={ubicar({ latitud: -33.451776, longitud: -70.661076 }, 40)}
-              onPress={() => router.push('/mapa/ficha')}
-            />
+            {agruparEnPantalla(
+              catastro.elementos,
+              (elemento) => elemento.posicion,
+              catastro.zoom,
+              LADO_DE_AGRUPACION,
+            ).map((grupo) => {
+              const primero = grupo.elementos[0];
+              if (primero === undefined) return null;
 
-            <GrupoDeMarcadores
-              cantidad={5}
-              posicion={ubicar({ latitud: -33.450566, longitud: -70.666394 }, 48)}
-              onPress={() => setSeleccionado('contenedor-grajales')}
-            />
+              if (grupo.elementos.length > 1) {
+                return (
+                  <GrupoDeMarcadores
+                    key={grupo.clave}
+                    cantidad={grupo.elementos.length}
+                    posicion={ubicar(grupo.posicion, 48)}
+                  />
+                );
+              }
+
+              const capa = capasDelCatastro[primero.capa as IdCapaDelCatastro];
+              return (
+                <MarcadorMapa
+                  key={grupo.clave}
+                  icono={capa.icono}
+                  color={colorDelElemento(
+                    primero.capa as IdCapaDelCatastro,
+                    primero.estadoDePlatabanda,
+                  )}
+                  tamano={34}
+                  accesibilidad={descripcionDelElemento(primero)}
+                  posicion={ubicar(primero.posicion, 34)}
+                />
+              );
+            })}
           </>
         )}
       </MapaBarrio>
@@ -285,4 +333,24 @@ function CampoDeBusqueda({ valor, onCambiar }: { valor: string; onCambiar: (text
       }}
     />
   );
+}
+
+/**
+ * Lo que el lector de pantalla anuncia de un elemento del catastro.
+ *
+ * Lleva el dato que distingue a cada capa, porque el icono y el color no
+ * bastan: la regla de accesibilidad del sistema visual pide que los iconos
+ * vayan siempre acompanados de texto.
+ */
+function descripcionDelElemento(elemento: ElementoEnElMapa): string {
+  const capa = capasDelCatastro[elemento.capa as IdCapaDelCatastro];
+  const detalles = [
+    elemento.estadoDePlatabanda,
+    elemento.tipoDeMicrobasural,
+    elemento.direccion,
+    elemento.areaM2 > 0 ? `${Math.round(elemento.areaM2)} metros cuadrados` : undefined,
+    elemento.largoM > 0 ? `${Math.round(elemento.largoM)} metros de largo` : undefined,
+  ].filter((parte): parte is string => parte !== undefined);
+
+  return [capa.etiqueta, ...detalles].join(', ');
 }

@@ -4,11 +4,22 @@ Traducción del tipo `Reporte` de `src/dominio/tipos.ts` a PostgreSQL con
 PostGIS, para Supabase. Las ocho categorías y los cuatro estados son los mismos
 del catastro 2022 que ya usa el prototipo, declarados como tipos enumerados.
 
+## Estado
+
+**Las trece migraciones están aplicadas** en el proyecto `barrio-republica` de
+Supabase, región São Paulo, con PostGIS 3.3.7. Las capas prioritarias del
+catastro están cargadas: 903 elementos. El ingreso con cuenta funciona, y con
+él la aplicación lee y escribe de verdad contra este esquema.
+
+La numeración salta de la 0009 a la 0011 y conviene saber por qué: la 0010
+abría la lectura del catastro al rol anónimo y **se descartó**, para no relajar
+la decisión de cuenta obligatoria. No quedó sin aplicar, quedó eliminada.
+
 ## Cómo aplicarlas
 
 Las migraciones están en `migraciones/`, numeradas y pensadas para correrse en
-orden. No hay proyecto de Supabase creado todavía, así que la forma de aplicarlas
-es pegar cada archivo en el editor SQL del panel, o conectarse con `psql`.
+orden, desde cero y en este orden. La forma de aplicarlas es pegar cada archivo
+en el editor SQL del panel, o conectarse con `psql`.
 
 ```
 psql "$CADENA_DE_CONEXION" -f migraciones/0001_extensiones_y_taxonomias.sql
@@ -124,11 +135,60 @@ necesita mantención.
 | `elementos_del_catastro` | Los 2.032 elementos. **Vacía**, ver `carga/` |
 | `revisiones_del_catastro` | Lo que un vecino responde sobre el estado de hoy |
 
+## Cuatro cosas que solo aparecieron al aplicarlo
+
+El esquema escrito se veía correcto y no funcionaba. Las dos primeras fallas
+son la misma: el cliente solo puede leer `reportes.id`, que es lo que impide
+filtrar al autor de un reporte anónimo, y eso rompía todo lo que necesitara
+leer otra columna de esa tabla.
+
+| Qué fallaba | Por qué | Cómo se resolvió |
+|---|---|---|
+| `confirmar_reporte` | Copia `reportes.autor` a la tabla de confirmaciones | Pasa a `security definer`. No abre un hueco: quien confirma lo fija la función con `auth.uid()`, y las dos reglas son restricciones de la tabla |
+| Leer el seguimiento y los comentarios | Sus políticas miraban `reportes.oculto` con una subconsulta, que corre con los permisos de quien consulta | Se encapsula en `reporte_visible()`, que corre como dueña |
+| Leer y crear el propio perfil | `personas` tenía políticas pero ningún permiso otorgado, y hacen falta los dos: el permiso dice si puedes tocar la tabla y la política dice cuáles filas | `grant select, insert, update on personas to authenticated`, en la migración 0011 |
+| Subir una fotografía | La aplicación sube con `upsert`, que PostgREST traduce a un `insert ... on conflict do update`, y Postgres exige permiso de actualización aunque la fila no exista y aunque el conflicto nunca ocurra | `grant update` más la política de reemplazo, en la migración 0013 |
+
+La salida fácil en los dos primeros casos era abrir la columna del autor, que
+es exactamente lo que el modelo no puede hacer. El mismo patrón se repitió
+después en `reporte_es_mio()`, para las fotos.
+
+Los dos últimos son de otra familia y valen anotarse aparte. No se vieron al
+escribir el esquema ni al probarlo con sesiones simuladas, sino en el primer
+ingreso real y en la primera subida real, porque hasta entonces nadie había
+tenido cuenta. Una política sin permiso no avisa que está incompleta: la base
+responde `permission denied` sin llegar a mirarla, que es un mensaje que manda
+a buscar justo donde no está el problema.
+
+La regla operativa que queda: **cada tabla con políticas tiene que tener
+otorgados los verbos que el cliente realmente usa, y `upsert` cuenta como
+dos.** El caso inverso también existía y se corrigió en la migración 0012:
+`gestores_territoriales` tenía una política que no podía aplicarse nunca,
+porque la tabla no tiene ningún permiso otorgado al cliente y así debe
+quedarse. Sacarla deja la tabla más cerrada, no menos, porque con RLS activo y
+sin ninguna política Postgres niega todo lo que no venga de la dueña.
+
+## El catastro queda detrás de la cuenta
+
+Se evaluó abrir la lectura de las capas del catastro al rol anónimo,
+apoyándose en la minuta del 14 de octubre, que acordó que los contenidos
+públicos se puedan ver y compartir sin tener la aplicación. Los datos del
+diagnóstico son públicos y no tienen personas identificables.
+
+**El equipo decidió no hacerlo**, para no relajar la decisión del 19 de
+octubre de cuenta obligatoria. La consecuencia práctica es que el mapa no
+muestra las capas hasta que exista el ingreso por correo, aunque los 903
+elementos ya estén cargados y la consulta espacial funcione.
+
 ## Lo que falta
 
-- **Autenticación.** Las políticas se escriben contra `auth.uid()` y no se
-  pueden probar de verdad hasta que exista registro. Hoy la aplicación entra
-  siempre como Rosa.
-- **Los datos del catastro**, bloqueados por la autorización que no existe.
+- **El ingreso por código al correo.** Las políticas se escriben contra
+  `auth.uid()`. Sin sesión, la aplicación no puede leer nada: ni reportes, ni
+  fotos, ni capas. Es lo que bloquea la verificación visual del mapa.
+- **La ficha de un elemento del catastro**, que hoy muestra un ejemplo fijo y
+  todavía no lee el elemento que se tocó.
 - **Las propuestas y las actividades**, que tienen sus propios tipos en el
   prototipo y quedaron fuera de esta tarea.
+- **La capa de patrimonio** no se migró ni se va a migrar sin resolver antes
+  el tratamiento de datos personales: su formulario recoge nombre del dueño y
+  del arrendatario junto a la dirección.

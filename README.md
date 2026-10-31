@@ -57,7 +57,7 @@ Para revisar que no haya errores de tipos: `npm run revisar-tipos`.
 
 ## Estado de conexión con el backend
 
-**El esquema y la capa de datos existen, el proyecto de Supabase no.**
+**El backend está en pie y la aplicación entra con cuenta propia.**
 
 La decisión de stack es Supabase con PostGIS, tomada el 19 de octubre de 2026
 tras comparar cuatro alternativas, por ser la única con consultas espaciales
@@ -65,26 +65,32 @@ nativas.
 
 | Pieza | Estado |
 |---|---|
-| Esquema de los reportes | Escrito, en `basedatos/migraciones` |
-| Funciones de registro y consulta | Escritas, en `src/datos/reportesEnLinea.ts` |
-| Proyecto de Supabase | **No existe.** Las migraciones no se han aplicado |
-| Sesión y cuentas | Pendiente. Hoy entra siempre como Rosa |
-| Capas del catastro | Bloqueadas, falta la autorización |
+| Proyecto de Supabase | Creado, región São Paulo, PostGIS 3.3.7 |
+| Esquema de los reportes | Aplicado y verificado |
+| Funciones de registro y consulta | Aplicadas y probadas contra la base |
+| Almacenamiento de imágenes | Depósito privado y políticas aplicadas |
+| Capas del catastro 2022 | 903 elementos cargados en ocho capas |
+| Sesión y cuentas | Ingreso por código al correo, probado de punta a punta |
 
-Mientras no haya credenciales, la aplicación arranca con los datos de ejemplo
-en memoria y funciona igual que antes. Apenas se copien `EXPO_PUBLIC_SUPABASE_URL`
-y `EXPO_PUBLIC_SUPABASE_CLAVE_ANONIMA` a un `.env.local`, el estado empieza a
-leer y escribir contra la base sin tocar ninguna pantalla. Ver
-[`.env.example`](.env.example) y
+Las políticas de fila se escriben contra `auth.uid()`, de modo que sin sesión
+la aplicación no puede leer ni escribir nada. Eso es lo que hacía que el
+ingreso condicionara todo lo demás, y la razón de haberlo implementado antes
+que cualquier pantalla nueva. El mecanismo es el que decidió la contraparte el
+19 de octubre: cuenta obligatoria, sin contraseña, con código de seis números
+al correo. Cómo quedó armado el envío y qué falta para abrirlo al barrio está
+en [`basedatos/ingreso-por-correo.md`](basedatos/ingreso-por-correo.md).
+
+Las credenciales van en un `.env.local`: ver [`.env.example`](.env.example) y
 [`basedatos/modelo-de-datos.md`](basedatos/modelo-de-datos.md).
 
 Dos advertencias que condicionan la puesta en marcha. El plan gratuito de
 Supabase pausa los proyectos tras siete días sin actividad, lo que en una
 organización pequeña reproduce el patrón que ya mató dos herramientas del
-barrio, así que hace falta una consulta programada que lo mantenga vivo. Y
-migrar las capas del catastro 2022 requiere autorización escrita de República
-Circular, que todavía no existe: los datos están publicados con acceso público
-pero sin licencia declarada, y eso no equivale a licencia abierta.
+barrio, así que hace falta una consulta programada que lo mantenga vivo. Y las
+capas del catastro 2022 se migraron con la autorización que Jorge dio de
+palabra en reunión, donde señaló que es información abierta: esa autorización
+no quedó escrita en ninguna minuta, así que conviene pedir una línea por correo
+o mensaje y guardarla junto a la evidencia.
 
 ---
 
@@ -117,11 +123,11 @@ la letra, que se aplica a toda la aplicación.
 
 | Pieza | Estado en el prototipo | Qué falta |
 |---|---|---|
-| Datos | En memoria mientras no haya credenciales | Crear el proyecto y aplicar las migraciones |
-| Mapa | OpenStreetMap real, con arrastre y zoom | Las capas del catastro encima |
-| Fotografías | Trama diagonal de relleno | Almacenamiento de archivos |
+| Datos | Reales con sesión abierta; de ejemplo si no hay credenciales | Nada |
+| Mapa | OpenStreetMap real, con arrastre, zoom y las ocho capas | Tocar un grupo y que acerque |
+| Fotografías | Se eligen y se suben al publicar | Mostrarlas en el detalle del reporte |
 | Avisos | Lista precargada | Notificaciones push |
-| Sesión | Siempre entra como Rosa | Acceso por código al correo |
+| Sesión | Cuenta propia con código al correo | Un dominio propio para escribirle a cualquiera |
 
 Las tres decisiones de stack vienen de la bitácora del proyecto: React Native
 con Expo, Supabase y OpenStreetMap, todas herramientas abiertas y gratuitas.
@@ -151,9 +157,15 @@ src/
   componentes/base/       Piezas sin dominio: Boton, Tarjeta, Chip, Texto
   componentes/app/        Piezas con dominio: TarjetaReporte, MapaBarrio
   dominio/                Categorías, estados, etapas y tipos
-  datos/                  Datos de ejemplo
+  datos/                  Consultas a Supabase y datos de ejemplo
   estado/                 Contextos de React
   utiles/                 Ayudas sueltas
+
+basedatos/
+  migraciones/            Los trece archivos SQL, en el orden en que se aplican
+  carga/                  Preparación y validación del catastro 2022
+  modelo-de-datos.md      Por qué cada tabla y cada política son así
+  ingreso-por-correo.md   Cómo se manda el código y qué falta para abrirlo
 ```
 
 ### La regla de dependencias
@@ -174,7 +186,7 @@ src/componentes/base/     componentes sin dominio
 src/estado/               contextos de React
   |
   v
-src/datos/                datos de ejemplo
+src/datos/                acceso a datos y datos de ejemplo
   |
   v
 src/dominio/              tipos y taxonomías
@@ -232,14 +244,16 @@ Las seis reglas de accesibilidad del sistema visual se cumplen en el código:
 
 ## Qué conviene hacer después
 
-1. Conectar Supabase y reemplazar `src/datos` por consultas reales, empezando
-   por reportes, que es la tabla de la que cuelga todo lo demás.
-2. Cambiar `MapaBarrio` por una vista de OpenStreetMap y migrar las capas del
-   diagnóstico 2022, para lo que hace falta la autorización escrita de
-   República Circular.
-3. Agregar el acceso por código al correo, que es la decisión que quedó para
-   resolver la fricción del registro.
-4. Probar con personas usuarias, incluida población flotante, y anotar dónde se
+1. Verificar un dominio propio en Resend. Mientras el remitente sea el dominio
+   de prueba, el código solo le llega a la casilla del equipo y ninguna vecina
+   puede entrar.
+2. Pedir por escrito la autorización de los datos del catastro y guardarla con
+   la evidencia de esa tarea, porque hoy existe solo de palabra.
+3. Dejar una consulta programada que toque la base una vez al día, para que el
+   plan gratuito no pause el proyecto.
+4. Mostrar las fotografías en el detalle del reporte: hoy se suben y se guardan,
+   pero no se ven.
+5. Probar con personas usuarias, incluida población flotante, y anotar dónde se
    traban.
 
 ---
@@ -249,5 +263,5 @@ Las seis reglas de accesibilidad del sistema visual se cumplen en el código:
 MIT. Ver [`LICENSE`](LICENSE).
 
 La licencia cubre el código de este repositorio. Los datos del catastro
-socioambiental 2022 no están cubiertos y su uso requiere autorización escrita de
-República Circular.
+socioambiental 2022 no están cubiertos: se usan con la autorización de la
+contraparte y esa autorización todavía no está por escrito.

@@ -16,8 +16,12 @@ import { usarPreferencias } from './preferencias';
 
 export type BorradorDeReporte = {
   categoria: IdCategoria | null;
-  /** Cuantas fotos adjunto. El maximo del diseno es tres. */
-  fotos: number;
+  /**
+   * Las fotos adjuntas, como rutas locales del telefono. El maximo del diseno
+   * es tres. Van aqui y no en la pantalla de foto porque el paso de revision
+   * las muestra y porque al publicar hay que subirlas.
+   */
+  imagenes: string[];
   direccion: string;
   comoSeFormo: string | null;
   desdeCuando: string | null;
@@ -31,7 +35,7 @@ export type BorradorDeReporte = {
 
 const reporteVacio: BorradorDeReporte = {
   categoria: null,
-  fotos: 0,
+  imagenes: [],
   direccion: 'Sazié con Av. República',
   comoSeFormo: null,
   desdeCuando: null,

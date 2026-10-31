@@ -11,7 +11,9 @@ import {
 import { actividadesIniciales } from '@/datos/actividades';
 import { avisosIniciales } from '@/datos/avisos';
 import { capasIniciales } from '@/datos/catastro';
+import { conteoPorCapa } from '@/datos/catastroEnLinea';
 import { hayBackend } from '@/datos/cliente';
+import { subirFotosDeReporte } from '@/datos/fotosDeReporte';
 import { personas } from '@/datos/personas';
 import { propuestasIniciales } from '@/datos/propuestas';
 import { reportesIniciales } from '@/datos/reportes';
@@ -24,6 +26,8 @@ import {
 import type { IdCategoria } from '@/dominio/categorias';
 import type { IdEstado } from '@/dominio/estados';
 import { estados } from '@/dominio/estados';
+import { usarSesion } from './sesion';
+
 import type {
   Actividad,
   Aviso,
@@ -53,6 +57,8 @@ export type DatosDeReporteNuevo = {
   tieneFoto: boolean;
   anonimo: boolean;
   posicion: PuntoEnMapa;
+  /** Rutas locales de las fotos elegidas, que se suben tras publicar. */
+  imagenes: string[];
 };
 
 export type DatosDePropuestaNueva = {
@@ -124,6 +130,12 @@ function nuevoId(prefijo: string): string {
 }
 
 export function ProveedorBarrio({ children }: { children: ReactNode }) {
+  // Quien publica es quien tiene la sesion abierta. Sin backend el contexto
+  // de sesion entrega la vecina de ejemplo, de modo que el prototipo sigue
+  // siendo navegable para mostrarlo.
+  const { persona } = usarSesion();
+  const autor = persona ?? personas.rosa;
+
   const [reportes, setReportes] = useState<Reporte[]>(reportesIniciales);
   const [propuestas, setPropuestas] = useState<Propuesta[]>(propuestasIniciales);
   const [actividades, setActividades] = useState<Actividad[]>(actividadesIniciales);
@@ -144,6 +156,10 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
   const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
     if (!hayBackend) return;
     operacion().catch((error: unknown) => {
+      // Tambien a la consola. Guardarlo solo en el estado hacia que una falla
+      // al escribir en la base no dejara rastro en ninguna parte: la pantalla
+      // de cierre decia "Listo" y la foto nunca habia llegado.
+      console.error('No se pudo guardar en la base', error);
       setUltimoErrorDeDatos(
         error instanceof Error ? error.message : 'No se pudo guardar en la base',
       );
@@ -162,6 +178,24 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         );
       });
   }, []);
+
+  // El detalle de cada capa del catastro dice cuantos elementos tiene, y hasta
+  // ahora esa cifra venia escrita en la lista de ejemplo. No es la misma que
+  // la cargada, asi que con sesion abierta se reemplaza por lo que hay. Las
+  // tablas del catastro exigen cuenta, de ahi que dependa de la persona.
+  useEffect(() => {
+    if (!hayBackend || persona === null) return;
+    sincronizar(async () => {
+      const conteo = await conteoPorCapa();
+      setCapas((lista) =>
+        lista.map((capa) => {
+          const cuantos = conteo[capa.id];
+          if (capa.unidad === undefined || cuantos === undefined) return capa;
+          return { ...capa, detalle: `${cuantos} ${capa.unidad}` };
+        }),
+      );
+    });
+  }, [persona, sincronizar]);
 
   const cambiarUnReporte = useCallback(
     (id: string, transformar: (reporte: Reporte) => Reporte) => {
@@ -232,7 +266,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       resumen: 'Enviado recién',
       confirmaciones: 0,
       anonimo: datos.anonimo,
-      autor: datos.anonimo ? null : personas.rosa,
+      autor: datos.anonimo ? null : autor,
       esMio: true,
       tieneFoto: datos.tieneFoto,
       // El punto queda donde la persona dejo el mapa en el paso de ubicacion.
@@ -276,10 +310,15 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         lista.map((cada) => (cada.id === id ? { ...cada, id: idReal } : cada)),
       );
       setUltimoReportePublicado((actual) => (actual === id ? idReal : actual));
+
+      // Las fotos se suben despues y no antes porque la ruta de cada archivo
+      // lleva el identificador del reporte, que es lo que permite a las
+      // politicas del deposito comprobar que quien sube es la autora.
+      await subirFotosDeReporte(idReal, datos.imagenes);
     });
 
     return id;
-  }, [sincronizar]);
+  }, [autor, sincronizar]);
 
   const cambiarUnaPropuesta = useCallback(
     (id: string, transformar: (propuesta: Propuesta) => Propuesta) => {
@@ -303,7 +342,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     (id: string, texto: string, postura: PosturaComentario) => {
       const comentario: Comentario = {
         id: nuevoId('comentario'),
-        autor: personas.rosa,
+        autor,
         cuando: 'recién',
         postura,
         texto,
@@ -315,7 +354,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         comentarios: [...propuesta.comentarios, comentario],
       }));
     },
-    [cambiarUnaPropuesta],
+    [autor, cambiarUnaPropuesta],
   );
 
   const marcarComentarioUtil = useCallback(
@@ -339,7 +378,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       titulo: datos.titulo,
       eje: datos.eje,
       etapa: 'idea',
-      autor: personas.rosa,
+      autor,
       publicada: 'publicada recién',
       idea: datos.idea,
       apoyos: 1,
@@ -361,7 +400,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     };
     setPropuestas((lista) => [propuesta, ...lista]);
     return id;
-  }, []);
+  }, [autor]);
 
   const inscribirseEnActividad = useCallback(
     (id: string, modo: ModoDeParticipar, tarea?: string) => {
@@ -439,7 +478,16 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const restablecerCapas = useCallback(() => setCapas(capasIniciales), []);
+  // Restablecer vuelve a las capas que vienen encendidas, y no olvida los
+  // conteos que ya se leyeron de la base.
+  const restablecerCapas = useCallback(() => {
+    setCapas((lista) =>
+      lista.map((capa) => {
+        const inicial = capasIniciales.find((otra) => otra.id === capa.id);
+        return inicial === undefined ? capa : { ...capa, activa: inicial.activa };
+      }),
+    );
+  }, []);
 
   const avisosSinLeer = useMemo(
     () => avisos.filter((aviso) => !aviso.leido).length,

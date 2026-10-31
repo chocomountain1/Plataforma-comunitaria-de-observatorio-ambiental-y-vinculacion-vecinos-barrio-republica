@@ -16,13 +16,14 @@ import {
   Presionable,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import type { NombreIcono } from '@/diseno/iconos';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { categorias } from '@/dominio/categorias';
 import { usarBarrio } from '@/estado/barrio';
 import { usarBorradores } from '@/estado/borradores';
+import { usarQuienEntro } from '@/estado/sesion';
+import { pluralizar } from '@/utiles/texto';
 import { crearVolver } from '@/utiles/navegacion';
 
 /** Color de la divisoria entre filas del resumen. */
@@ -39,6 +40,7 @@ export default function PasoRevisar() {
   const volver = crearVolver('/reportar/detalles');
   const { reporte, cambiarReporte, reiniciarReporte } = usarBorradores();
   const { publicarReporte } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   const categoria = reporte.categoria === null ? undefined : categorias[reporte.categoria];
   const detalles = [reporte.comoSeFormo, reporte.desdeCuando?.toLowerCase()]
@@ -53,7 +55,8 @@ export default function PasoRevisar() {
       descripcion: reporte.descripcion,
       comoSeFormo: reporte.comoSeFormo ?? undefined,
       desdeCuando: reporte.desdeCuando ?? undefined,
-      tieneFoto: reporte.fotos > 0,
+      tieneFoto: reporte.imagenes.length > 0,
+      imagenes: reporte.imagenes,
       anonimo: reporte.anonimo,
       posicion: reporte.posicion,
     });
@@ -100,7 +103,7 @@ export default function PasoRevisar() {
           />
           <FilaDeResumen
             etiqueta="Foto"
-            valor={reporte.fotos === 0 ? 'Sin foto' : `${reporte.fotos} foto${reporte.fotos > 1 ? 's' : ''}`}
+            valor={textoDeFotos(reporte.imagenes.length)}
             adorno={<CuadroDeIcono icono="imagen" fondo={colores.fotoTramaClara} color={colores.fotoIcono} />}
             onCambiar={() => router.dismissTo('/reportar/foto')}
           />
@@ -128,7 +131,7 @@ export default function PasoRevisar() {
           </Texto>
           <Fila separacion={espacio.normal} alinear="stretch">
             <Opcion
-              texto={personas.rosa.nombre}
+              texto={quienEntro.nombre}
               seleccion="unica"
               activa={!reporte.anonimo}
               onPress={() => cambiarReporte({ anonimo: false })}
@@ -255,4 +258,10 @@ function CuadroDeIcono({
       <Icono nombre={icono} tamano={20} color={color} />
     </View>
   );
+}
+
+/** Resumen de cuantas fotos lleva el reporte, para la fila de revision. */
+function textoDeFotos(cuantas: number): string {
+  if (cuantas === 0) return 'Sin foto';
+  return `${cuantas} ${pluralizar(cuantas, 'foto', 'fotos')}`;
 }

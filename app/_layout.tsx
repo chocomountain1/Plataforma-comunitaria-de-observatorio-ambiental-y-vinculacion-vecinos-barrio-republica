@@ -1,8 +1,8 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack, usePathname, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -11,11 +11,45 @@ import { archivosDeFuente } from '@/diseno/tipografia';
 import { ProveedorBarrio } from '@/estado/barrio';
 import { ProveedorBorradores } from '@/estado/borradores';
 import { ProveedorPreferencias } from '@/estado/preferencias';
+import { ProveedorSesion, usarSesion } from '@/estado/sesion';
 
 // La pantalla de carga se mantiene hasta que las dos tipografias esten listas.
 // Si se deja pasar antes, el primer cuadro se dibuja con la letra del sistema y
 // se ve un salto feo.
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * La cuenta obligatoria tiene que ser una puerta y no un camino.
+ *
+ * Sin esto la obligacion solo valia mientras alguien siguiera el recorrido de
+ * bienvenida: en el navegador basta escribir la direccion, y en el telefono la
+ * aplicacion vuelve a abrirse donde se cerro. Quien llegara sin sesion veia el
+ * barrio de ejemplo mientras la base le rechazaba todo, que es la peor de las
+ * dos cosas: parece que funciona y no guarda nada.
+ */
+function Puerta({ children }: { children: ReactNode }) {
+  const { estado } = usarSesion();
+  const camino = usePathname();
+  const navegacion = useRootNavigationState();
+
+  // La bienvenida y el registro son el unico lugar donde se puede estar sin
+  // haber entrado.
+  const enElIngreso = camino === '/' || camino.startsWith('/ingreso');
+
+  useEffect(() => {
+    // Abriendo la aplicacion directo en una direccion, la sesion se resuelve
+    // antes de que el navegador exista y la redireccion se perderia en
+    // silencio, que fue justo lo que paso al probarlo.
+    if (navegacion?.key === undefined) return;
+    if (estado === 'cargando' || estado === 'sinBackend' || estado === 'dentro') return;
+    if (enElIngreso) return;
+    // Con sesion abierta y sin seudonimo falta solo la mitad del registro, pero
+    // el paso que lo crea vive en el mismo recorrido.
+    router.replace(estado === 'sinPerfil' ? '/ingreso/cuenta' : '/');
+  }, [estado, enElIngreso, navegacion?.key]);
+
+  return <>{children}</>;
+}
 
 export default function DisposicionRaiz() {
   const [fuentesListas, errorDeFuentes] = useFonts(archivosDeFuente);
@@ -34,9 +68,11 @@ export default function DisposicionRaiz() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ProveedorPreferencias>
-          <ProveedorBarrio>
+          <ProveedorSesion>
+            <ProveedorBarrio>
             <ProveedorBorradores>
               <StatusBar style="auto" />
+              <Puerta>
               <Stack
                 screenOptions={{
                   headerShown: false,
@@ -62,10 +98,11 @@ export default function DisposicionRaiz() {
                   name="actividades/inscripcion"
                   options={{ animation: 'fade_from_bottom' }}
                 />
-                <Stack.Screen name="reportar/enviado" options={{ animation: 'fade' }} />
               </Stack>
+              </Puerta>
             </ProveedorBorradores>
-          </ProveedorBarrio>
+            </ProveedorBarrio>
+          </ProveedorSesion>
         </ProveedorPreferencias>
       </SafeAreaProvider>
     </GestureHandlerRootView>

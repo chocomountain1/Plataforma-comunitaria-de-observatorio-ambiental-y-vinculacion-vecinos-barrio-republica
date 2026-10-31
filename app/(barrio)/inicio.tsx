@@ -20,13 +20,13 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import type { NombreIcono } from '@/diseno/iconos';
 import { espacio, radio } from '@/diseno/medidas';
 import { estados } from '@/dominio/estados';
 import { usarBarrio } from '@/estado/barrio';
 import { usarPreferencias } from '@/estado/preferencias';
+import { usarQuienEntro } from '@/estado/sesion';
 
 /** Pestanas que filtran el feed. */
 const pestanas = ['Todo', 'Propuestas', 'Actividades', 'Reportes'] as const;
@@ -50,6 +50,7 @@ export default function Inicio() {
   const { reportes, propuestas, actividades, confirmarReporte, descartarReporte, apoyarPropuesta } =
     usarBarrio();
   const { menosAnimaciones } = usarPreferencias();
+  const quienEntro = usarQuienEntro();
   const [pestanaActiva, setPestanaActiva] = useState<Pestana>('Todo');
   const [confirmacionRespondida, setConfirmacionRespondida] = useState(false);
 
@@ -90,7 +91,7 @@ export default function Inicio() {
             </Texto>
           </Fila>
           <Texto tamano={30} familia="titulo" interlineado={1.1}>
-            {`Hola, ${personas.rosa.nombre}`}
+            {`Hola, ${quienEntro.nombre}`}
           </Texto>
         </Columna>
         <Presionable
@@ -98,7 +99,7 @@ export default function Inicio() {
           accessibilityRole="button"
           accessibilityLabel="Mi perfil y ajustes"
         >
-          <Avatar persona={personas.rosa} tamano={48} conAro />
+          <Avatar persona={quienEntro} tamano={48} conAro />
         </Presionable>
       </Fila>
 

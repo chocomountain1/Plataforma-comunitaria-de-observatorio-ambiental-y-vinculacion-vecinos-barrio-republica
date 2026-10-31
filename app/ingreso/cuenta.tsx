@@ -35,7 +35,7 @@ import { crearVolver } from '@/utiles/navegacion';
  */
 export default function Cuenta() {
   const volver = crearVolver('/ingreso/intereses');
-  const { pedirCodigo } = usarSesion();
+  const { pedirCodigo, estado } = usarSesion();
   const [seudonimo, setSeudonimo] = useState('');
   const [correo, setCorreo] = useState('');
   const [aceptaNormas, setAceptaNormas] = useState(false);
@@ -46,6 +46,14 @@ export default function Cuenta() {
     seudonimo.trim().length >= 2 && correo.includes('@') && aceptaNormas && !enviando;
 
   async function enviar() {
+    // Sin credenciales configuradas no hay a quien pedirle el codigo, y el
+    // prototipo tiene que seguir siendo navegable asi: es como se muestra en
+    // reuniones y como lo corre quien clona el repositorio.
+    if (estado === 'sinBackend') {
+      router.replace('/inicio');
+      return;
+    }
+
     setEnviando(true);
     setError(null);
     try {
@@ -135,7 +143,13 @@ export default function Cuenta() {
           </Aviso>
         )}
         <Boton
-          texto={enviando ? 'Enviando...' : 'Enviarme el código'}
+          texto={
+            estado === 'sinBackend'
+              ? 'Entrar al barrio'
+              : enviando
+                ? 'Enviando...'
+                : 'Enviarme el código'
+          }
           icono="sobre"
           alto={56}
           tamanoDeTexto={18}
@@ -143,9 +157,11 @@ export default function Cuenta() {
           onPress={() => void enviar()}
           vibrar
         />
-        <Texto tamano={14} color={colores.grisTexto} alineacion="center">
-          Llega en unos segundos. Revisa también el correo no deseado.
-        </Texto>
+        {estado === 'sinBackend' ? null : (
+          <Texto tamano={14} color={colores.grisTexto} alineacion="center">
+            Llega en unos segundos. Revisa también el correo no deseado.
+          </Texto>
+        )}
       </BarraInferior>
     </Pantalla>
   );

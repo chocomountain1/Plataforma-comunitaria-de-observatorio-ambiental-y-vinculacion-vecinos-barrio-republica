@@ -44,7 +44,8 @@ type ContextoSesion = {
   /** Quien publica, comenta y confirma. Nunca es nula si se puede usar la app. */
   persona: Persona | null;
   pedirCodigo: (correo: string) => Promise<void>;
-  confirmarCodigo: (correo: string, codigo: string) => Promise<void>;
+  /** Devuelve en que queda la sesion: de eso depende si hay que crear perfil. */
+  confirmarCodigo: (correo: string, codigo: string) => Promise<EstadoDeSesion>;
   crearPerfil: (seudonimo: string, vinculo: string) => Promise<void>;
   cerrarSesion: () => Promise<void>;
 };
@@ -59,18 +60,20 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     hayBackend ? null : personas.rosa,
   );
 
-  const revisar = useCallback(async () => {
-    if (!hayBackend) return;
+  const revisar = useCallback(async (): Promise<EstadoDeSesion> => {
+    if (!hayBackend) return 'sinBackend';
     const perfil = await perfilActual();
     if (perfil !== null) {
       setPersona(perfil);
       setEstado('dentro');
-      return;
+      return 'dentro';
     }
     setPersona(null);
     // perfilActual devuelve nulo tanto si no hay sesion como si la hay y aun
     // no se elige seudonimo, asi que hay que distinguirlas aqui.
-    setEstado((await haySesion()) ? 'sinPerfil' : 'sinCuenta');
+    const siguiente: EstadoDeSesion = (await haySesion()) ? 'sinPerfil' : 'sinCuenta';
+    setEstado(siguiente);
+    return siguiente;
   }, []);
 
   useEffect(() => {
@@ -83,10 +86,12 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     await pedirCodigoEnLinea(correo);
   }, []);
 
+  // Devuelve el estado en vez de dejar que la pantalla lo lea del contexto,
+  // porque ahi todavia figura el de antes de entrar.
   const confirmarCodigo = useCallback(
     async (correo: string, codigo: string) => {
       await confirmarCodigoEnLinea(correo, codigo);
-      await revisar();
+      return revisar();
     },
     [revisar],
   );

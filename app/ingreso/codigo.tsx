@@ -38,7 +38,7 @@ export default function CodigoDeIngreso() {
     correo: string;
     seudonimo: string;
   }>();
-  const { confirmarCodigo, crearPerfil, pedirCodigo, estado } = usarSesion();
+  const { confirmarCodigo, crearPerfil, pedirCodigo } = usarSesion();
 
   const [codigo, setCodigo] = useState('');
   const [comprobando, setComprobando] = useState(false);
@@ -51,11 +51,12 @@ export default function CodigoDeIngreso() {
     setComprobando(true);
     setError(null);
     try {
-      await confirmarCodigo(correo, codigo);
+      const sesion = await confirmarCodigo(correo, codigo);
 
-      // Si ya habia perfil, confirmarCodigo deja el estado en "dentro" y no
-      // hay nada mas que hacer.
-      if (estado !== 'dentro' && seudonimo.length > 0) {
+      // Quien ya tiene cuenta vuelve a escribir un seudonimo en el paso
+      // anterior, pero aqui se descarta: crear el perfil de nuevo choca con el
+      // que ya existe y dejaria a la persona afuera teniendo la sesion abierta.
+      if (sesion === 'sinPerfil' && seudonimo.length > 0) {
         await crearPerfil(seudonimo, 'Vive en el barrio');
       }
       router.replace('/inicio');

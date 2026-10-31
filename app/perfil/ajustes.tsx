@@ -42,10 +42,9 @@ export default function Ajustes() {
   const [resumenSemanal, setResumenSemanal] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(true);
 
-  // Mientras no existia el ingreso, esto solo volvia a la bienvenida. Ahora hay
-  // una sesion guardada en el telefono y hay que cerrarla de verdad: en un
-  // telefono prestado, que es algo que aparecio en terreno, lo contrario deja
-  // la cuenta abierta para el siguiente.
+  // Cierra la sesion guardada en el telefono y no solo vuelve a la bienvenida.
+  // En un telefono prestado, que es algo que aparecio en terreno, volver sin
+  // cerrar dejaria la cuenta abierta para el siguiente.
   async function salir() {
     await cerrarSesion();
     router.replace('/');

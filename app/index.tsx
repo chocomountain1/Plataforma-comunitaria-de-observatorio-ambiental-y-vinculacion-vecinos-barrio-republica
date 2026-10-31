@@ -11,11 +11,10 @@ import { usarPreferencias } from '@/estado/preferencias';
 /**
  * Las tres promesas de la aplicacion, en el orden del mockup.
  *
- * La primera decia "sin crear cuenta", que era cierto hasta el 19 de octubre.
- * Desde que la cuenta es obligatoria, dejarla asi seria prometer algo que la
- * pantalla siguiente desmiente. Lo que se conserva es la promesa de fondo, que
- * es la rapidez, porque la barrera que aparecio en terreno era el tiempo del
- * registro y no el registro en si.
+ * La primera promete rapidez y no ausencia de registro, porque la cuenta es
+ * obligatoria y la pantalla siguiente la pide. La barrera que aparecio en
+ * terreno era el tiempo del registro y no el registro en si, y eso es lo que
+ * la promesa tiene que responder.
  */
 const promesas: { icono: NombreIcono; texto: string }[] = [
   { icono: 'pin', texto: 'Reporta en un minuto, sin contraseñas' },

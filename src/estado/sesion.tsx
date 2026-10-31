@@ -87,7 +87,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   }, []);
 
   // Devuelve el estado en vez de dejar que la pantalla lo lea del contexto,
-  // porque ahi todavia figura el de antes de entrar.
+  // donde todavia figura el de antes de entrar hasta el siguiente dibujo.
   const confirmarCodigo = useCallback(
     async (correo: string, codigo: string) => {
       await confirmarCodigoEnLinea(correo, codigo);

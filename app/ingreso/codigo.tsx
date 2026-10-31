@@ -53,9 +53,9 @@ export default function CodigoDeIngreso() {
     try {
       const sesion = await confirmarCodigo(correo, codigo);
 
-      // Quien ya tiene cuenta vuelve a escribir un seudonimo en el paso
-      // anterior, pero aqui se descarta: crear el perfil de nuevo choca con el
-      // que ya existe y dejaria a la persona afuera teniendo la sesion abierta.
+      // El seudonimo del paso anterior solo se usa cuando todavia no hay perfil.
+      // Crearlo de nuevo chocaria con el que ya existe y dejaria a la persona
+      // afuera teniendo la sesion abierta y el codigo ya gastado.
       if (sesion === 'sinPerfil' && seudonimo.length > 0) {
         await crearPerfil(seudonimo, 'Vive en el barrio');
       }

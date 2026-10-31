@@ -98,7 +98,6 @@ export default function DisposicionRaiz() {
                   name="actividades/inscripcion"
                   options={{ animation: 'fade_from_bottom' }}
                 />
-                <Stack.Screen name="reportar/enviado" options={{ animation: 'fade' }} />
               </Stack>
               </Puerta>
             </ProveedorBorradores>

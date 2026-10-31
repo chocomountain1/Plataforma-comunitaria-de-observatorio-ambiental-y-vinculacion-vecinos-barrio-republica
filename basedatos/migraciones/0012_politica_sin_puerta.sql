@@ -1,0 +1,18 @@
+-- Saca una politica que no podia aplicarse nunca.
+--
+-- ver_si_soy_gestor permitia a cada quien ver su propia fila en la tabla de
+-- gestores, pero esa tabla no tiene ningun permiso otorgado al cliente y asi
+-- tiene que quedarse: quien necesita saber si alguien es gestor llama a
+-- es_gestor(), que es security definer justamente para eso, y ningun otro
+-- lugar del esquema ni de la aplicacion la consulta directo.
+--
+-- Sacarla deja la tabla mas cerrada, no menos. Con RLS activo y sin ninguna
+-- politica, Postgres niega todo lo que no venga de la dueña, asi que si mañana
+-- alguien otorgara permisos por descuido sobre todas las tablas del esquema,
+-- la tabla seguiria sin entregar filas. Con la politica puesta, en cambio,
+-- cada quien pasaria a ver la suya.
+--
+-- Lo que se gana ademas es que el esquema deje de prometer una puerta vigilada
+-- donde no hay puerta. El resguardo de verdad son el permiso ausente y RLS
+-- activo, y los dos siguen en pie.
+drop policy ver_si_soy_gestor on gestores_territoriales;

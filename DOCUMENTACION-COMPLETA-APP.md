@@ -3,7 +3,13 @@
 Aplicación móvil de la plataforma comunitaria del Barrio República, construida
 con React Native y Expo. Este documento describe el proyecto completo: su
 contexto, su arquitectura, cada token de diseño, cada componente, cada pantalla
-y el código fuente íntegro de sus 97 archivos.
+y el código fuente íntegro de sus archivos.
+
+**Corte.** El cuerpo de este documento describe el prototipo tal como estaba el
+13 de octubre de 2026, cuando trabajaba con datos en memoria. El capítulo 18
+recoge lo que cambió al conectarlo con Supabase y los trece archivos que se
+sumaron. El código fuente de todos los capítulos está actualizado al 31 de
+octubre.
 
 **Propósito de este documento.** Está escrito para que una persona o un modelo
 de lenguaje que nunca vio el proyecto pueda reconstruirlo exactamente igual.
@@ -13,13 +19,13 @@ archivos omitidos.
 | Campo | Valor |
 |---|---|
 | Nombre del proyecto | `barrio-republica-app` |
-| Ubicación | `C:\Users\PabloReyesPomés\Desktop\barrio-republica-app` |
-| Fecha de corte | 13 de octubre de 2026 |
-| Archivos de código | 93 (40 en `app/`, 53 en `src/`) |
-| Líneas de código | 12.777 |
-| Pantallas | 36 del diseño, más 4 archivos de disposición |
+| Ubicación | `Desktop Proyecto República Circular\barrio-republica-app` |
+| Fecha de corte | 31 de octubre de 2026 |
+| Archivos de código | 106 (41 en `app/`, 65 en `src/`) |
+| Líneas de código | 14.898 |
+| Pantallas | 36 del diseño, más la del código de ingreso y la del sistema visual, y 3 archivos de disposición |
 | Componentes reutilizables | 31 |
-| Estado de verificación | Compila sin errores de tipos, empaqueta y fue recorrido pantalla por pantalla en el navegador |
+| Estado de verificación | Compila sin errores de tipos y fue recorrido pantalla por pantalla en el navegador, con sesión real contra Supabase |
 
 ---
 
@@ -130,7 +136,7 @@ explican varias pantallas:
 | Hallazgo | Consecuencia en la aplicación |
 |---|---|
 | Ninguna persona de población flotante supo a quién reportar | El reporte es el botón central y más grande de la barra |
-| **La fricción del registro es la barrera de adopción declarada** | Se puede reportar sin cuenta, el registro es opcional y sin contraseñas |
+| **La fricción del registro es la barrera de adopción declarada** | La cuenta es obligatoria desde el 19 de octubre, pero sin contraseñas: un correo y un código de seis números |
 | Los reportes previos no recibían seguimiento visible | La línea de tiempo de cuatro estados es la pantalla más importante después del mapa |
 | **El riesgo de reportes falsos es la principal causa de desconfianza** | Existe moderación, confirmación entre vecinos y señalamiento |
 | Hay más apetito por apoyar o votar que por comentar | Apoyar es un botón grande; comentar es secundario |
@@ -2412,8 +2418,10 @@ porque el reporte ya existe.
 ```
   /  Bienvenida
    ├── Comenzar ──────────> /ingreso/vinculo ──> /ingreso/intereses ──> /ingreso/cuenta ──┐
-   ├── Ya tengo cuenta ───> /ingreso/cuenta ─────────────────────────────────────────────┤
-   └── Solo quiero reportar ──> /reportar/categoria                                       │
+   └── Ya tengo cuenta ───> /ingreso/cuenta ─────────────────────────────────────────────┤
+                                                                                          v
+                                                                              /ingreso/codigo
+                                                                                          │
                                                                                           v
                                                         ┌──────────────────────── /inicio (pestañas)
                                                         │
@@ -2552,13 +2560,13 @@ Fondo `bosque`. Es la única pantalla con figuras decorativas.
      con ícono de 20 px en `brote`:
      | Ícono | Texto |
      |---|---|
-     | `pin` | Reporta en un minuto, sin crear cuenta |
+     | `pin` | Reporta en un minuto, sin contraseñas |
      | `visto` | Mira en qué va cada reporte |
      | `personas` | Propón soluciones con tus vecinos |
-   - Tres acciones: **«Comenzar»** variante `brote`, alto 58, con flecha al
-     final y vibración; **«Ya tengo cuenta»** variante `contornoClaro`, alto 54;
-     y **«Solo quiero reportar algo ahora»** como texto subrayado de 44 px de
-     alto mínimo.
+   - Dos acciones: **«Comenzar»** variante `brote`, alto 58, con flecha al
+     final y vibración; y **«Ya tengo cuenta»** variante `contornoClaro`, alto
+     54. La tercera, **«Solo quiero reportar algo ahora»**, se quitó al pasar la
+     cuenta a obligatoria.
 
 **Animaciones.** El título entra con `FadeInUp` de 500 ms. Las tres promesas con
 `FadeInDown` escalonado: 0, 120 y 240 ms de retraso, 420 ms de duración. Todas
@@ -2567,9 +2575,13 @@ se desactivan con `menosAnimaciones`.
 **Interacciones.** El botón «A A» llama a `rotarTamanoDeTexto()` y su etiqueta de
 accesibilidad informa el porcentaje actual.
 
-**Por qué «Solo quiero reportar algo ahora» está aquí.** La fricción del
-registro fue la barrera de adopción declarada en terreno. Esta pantalla ofrece
-la salida antes de pedir nada.
+**Por qué ya no está «Solo quiero reportar algo ahora».** La fricción del
+registro fue la barrera de adopción declarada en terreno, y esta pantalla
+ofrecía la salida antes de pedir nada. La contraparte objetó el acceso sin
+cuenta el 19 de octubre, porque sin cuenta una misma persona puede crearse
+varias identidades e inflar la priorización comunitaria. La respuesta a la
+fricción dejó de ser saltarse el registro y pasó a ser que crearlo cueste un
+correo y un código.
 
 ---
 
@@ -2622,20 +2634,25 @@ Toda la fila es tocable, no solo el interruptor.
 
 ---
 
-### 1.4 Perfil opcional sin contraseña · `/ingreso/cuenta`
+### 1.4 Crear la cuenta del barrio · `/ingreso/cuenta`
 
-**Composición:** solo botón de volver; píldora **«Opcional»** en `menta`; título
-de 32 px «Crea tu perfil para recibir avisos»; párrafo «No pedimos tu nombre
-real ni tu RUT»; formulario con `CampoTexto` de **Seudónimo** (valor inicial
-«Rosa», con la ayuda «Puede ser inventado») y **Correo electrónico**; un `Aviso`
-tono `logro` con ícono `candado` que dice «**Sin contraseñas.** Cada vez que
-entres te mandamos un código de 6 números a tu correo»; una `Casilla` de normas
-de convivencia marcada por defecto; `BarraInferior` con «Enviarme el código»
-(ícono `sobre`, alto 56), «Seguir sin cuenta» y la nota «Sin cuenta igual puedes
-reportar y mirar el mapa».
+**Composición:** solo botón de volver; etiqueta **«Paso final»** en `menta`;
+título de 32 px «Crea tu cuenta del barrio»; párrafo «Te avisamos cuando tu
+reporte avance. No pedimos tu nombre real ni tu RUT»; formulario con
+`CampoTexto` de **Seudónimo** (ayuda «Es el nombre que verán tus vecinos. Puede
+ser inventado.») y **Correo electrónico**; un `Aviso` tono `logro` con ícono
+`candado` que dice «**Sin contraseñas.** Cada vez que entres te mandamos un
+código de 6 números a tu correo»; una `Casilla` de normas de convivencia sin
+marcar; `BarraInferior` con «Enviarme el código» (ícono `sobre`, alto 56) y la
+nota «Llega en unos segundos. Revisa también el correo no deseado».
 
-**Validación:** el botón principal se habilita con seudónimo no vacío, correo con
-`@` y normas aceptadas. Ambos botones hacen `router.replace('/inicio')`.
+**Validación:** el botón se habilita con seudónimo de dos letras o más, correo
+con `@` y normas aceptadas. Al apretarlo manda el código y navega a
+`/ingreso/codigo` llevando el correo y el seudónimo.
+
+**Sin credenciales configuradas** el botón dice «Entrar al barrio» y entra
+directo, porque no hay a quién pedirle el código y el prototipo tiene que
+seguir siendo navegable para mostrarlo en reuniones.
 
 Usa `KeyboardAvoidingView` con `behavior="padding"` solo en iOS.
 
@@ -4063,7 +4080,7 @@ final las pantallas. Esta es la fuente de verdad definitiva del documento.
 
 #### `package.json`
 
-Dependencias, scripts y punto de entrada. (39 líneas)
+Dependencias, scripts y punto de entrada. (41 líneas)
 
 ```json
 {
@@ -4072,10 +4089,12 @@ Dependencias, scripts y punto de entrada. (39 líneas)
   "main": "expo-router/entry",
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.118.0",
     "expo": "~57.0.27",
     "expo-constants": "~57.0.21",
     "expo-font": "~57.0.4",
     "expo-haptics": "~57.0.3",
+    "expo-image-manipulator": "~57.0.21",
     "expo-image-picker": "~57.0.20",
     "expo-linking": "~57.0.12",
     "expo-router": "~57.0.25",
@@ -4820,7 +4839,7 @@ export const listaDeEtapas: EtapaPropuesta[] = idsDeEtapa.map((id) => etapas[id]
 
 #### `src/dominio/tipos.ts`
 
-Todos los tipos del modelo de datos. (233 líneas)
+Todos los tipos del modelo de datos. (283 líneas)
 
 ```ts
 import type { NombreIcono } from '@/diseno/iconos';
@@ -4848,10 +4867,43 @@ export type Persona = {
   esOrganizacion?: boolean;
 };
 
-/** Posicion sobre el plano del barrio, en las mismas coordenadas del mockup. */
+/**
+ * Posicion sobre el mapa, en grados decimales WGS84, que es el sistema en el
+ * que vienen las capas del catastro 2022 y el que espera PostGIS.
+ */
 export type PuntoEnMapa = {
-  x: number;
-  y: number;
+  latitud: number;
+  longitud: number;
+};
+
+/** Los cuatro bordes de lo que el mapa tiene a la vista, en grados. */
+export type RecuadroDelMapa = {
+  sur: number;
+  oeste: number;
+  norte: number;
+  este: number;
+};
+
+/**
+ * Un elemento del catastro 2022 listo para dibujar.
+ *
+ * La posicion es un punto representativo aunque la figura original sea una
+ * linea o un poligono, porque el mapa dibuja chinchetas. El area y el largo
+ * vienen calculados sobre la geometria completa, que la base conserva.
+ */
+export type ElementoEnElMapa = {
+  id: string;
+  capa: string;
+  /** Identificador que el elemento traia en el archivo del diagnostico. */
+  fid: number;
+  posicion: PuntoEnMapa;
+  tipoDeGeometria: string;
+  areaM2: number;
+  largoM: number;
+  direccion?: string;
+  estadoDePlatabanda?: string;
+  tipoDeMicrobasural?: string;
+  quienLoCuida?: string;
 };
 
 /** Un paso del recorrido de un reporte, tal como se ve en "En que va". */
@@ -4886,6 +4938,17 @@ export type Reporte = {
   confirmaciones: number;
   /** Vecinos que lo marcaron como inexistente. Dispara la revision. */
   senalamientos?: number;
+  /**
+   * Publicado sin mostrar quien. Es una decision por publicacion y no una
+   * configuracion del perfil: la misma persona puede publicar un reporte con
+   * su nombre y el siguiente sin el.
+   */
+  anonimo: boolean;
+  /**
+   * Nulo cuando el reporte es anonimo. En la base el autor siempre existe;
+   * lo que llega a la aplicacion ya viene enmascarado por la vista, para que
+   * el dato no pueda filtrarse desde el cliente.
+   */
   autor: Persona | null;
   esMio: boolean;
   tieneFoto: boolean;
@@ -5023,6 +5086,12 @@ export type CapaDelMapa = {
   id: string;
   nombre: string;
   detalle: string;
+  /**
+   * Con que se cuentan los elementos de esta capa: puntos, franjas, tramos.
+   * Solo las capas del catastro la tienen, y es lo que permite rehacer el
+   * detalle con el conteo real cuando hay sesion.
+   */
+  unidad?: string;
   grupo: 'ahora' | 'catastro';
   activa: boolean;
 };
@@ -5062,7 +5131,7 @@ export type Desafio = {
 
 #### `src/datos/personas.ts`
 
-Las siete personas y organizaciones del prototipo. (25 líneas)
+Las siete personas y organizaciones del prototipo. (24 líneas)
 
 ```ts
 import type { Persona } from '@/dominio/tipos';
@@ -5089,12 +5158,11 @@ export const personas = {
 } satisfies Record<string, Persona>;
 
 /** La persona que usa la aplicacion durante la demostracion. */
-export const personaActual: Persona = personas.rosa;
 ```
 
 #### `src/datos/reportes.ts`
 
-Los nueve reportes, con su seguimiento y sus comentarios. (293 líneas)
+Los nueve reportes, con su seguimiento y sus comentarios. (302 líneas)
 
 ```ts
 import { personas } from './personas';
@@ -5122,10 +5190,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: '3 nov 2026, 10:24',
     resumen: 'Enviado el 3 nov · 1 propuesta asociada',
     confirmaciones: 12,
+    anonimo: false,
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 202, y: 206 },
+    posicion: { latitud: -33.449046, longitud: -70.663187 },
     seguimiento: [
       { estado: 'recibido', fecha: '3 nov', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       {
@@ -5184,10 +5253,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: '28 oct 2026, 18:40',
     resumen: 'Enviado el 28 oct · actualizado hace 2 h',
     confirmaciones: 5,
+    anonimo: false,
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 292, y: 602 },
+    posicion: { latitud: -33.454618, longitud: -70.659668 },
     seguimiento: [
       { estado: 'recibido', fecha: '28 oct', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: '29 oct', detalle: '5 vecinos lo confirmaron', ocurrio: true },
@@ -5212,10 +5282,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: 'ayer, 09:10',
     resumen: 'Enviado ayer',
     confirmaciones: 0,
+    anonimo: false,
     autor: personas.rosa,
     esMio: true,
     tieneFoto: false,
-    posicion: { x: 68, y: 470 },
+    posicion: { latitud: -33.452761, longitud: -70.668427 },
     seguimiento: [
       { estado: 'recibido', fecha: 'ayer', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       {
@@ -5245,10 +5316,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: '3 nov 2026',
     resumen: '12 nov · 9 días después de tu reporte',
     confirmaciones: 9,
+    anonimo: false,
     autor: personas.rosa,
     esMio: true,
     tieneFoto: true,
-    posicion: { x: 150, y: 640 },
+    posicion: { latitud: -33.455153, longitud: -70.665221 },
     seguimiento: [
       { estado: 'recibido', fecha: '3 nov', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: '5 nov', detalle: '9 vecinos lo confirmaron', ocurrio: true },
@@ -5277,10 +5349,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: 'hace 1 día',
     resumen: 'Hace 1 día · 8 vecinos lo confirman',
     confirmaciones: 8,
+    anonimo: false,
     autor: personas.hernan,
     esMio: false,
     tieneFoto: true,
-    posicion: { x: 120, y: 314 },
+    posicion: { latitud: -33.450566, longitud: -70.666394 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 1 día', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hoy', detalle: '8 vecinos lo confirmaron', ocurrio: true },
@@ -5305,10 +5378,11 @@ export const reportesIniciales: Reporte[] = [
     resumen: 'Señalado por 3 vecinos',
     confirmaciones: 0,
     senalamientos: 3,
+    anonimo: true,
     autor: null,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 96, y: 336 },
+    posicion: { latitud: -33.450875, longitud: -70.667332 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 3 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', detalle: 'En revisión por moderación', ocurrio: false },
@@ -5327,10 +5401,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: 'hace 41 días',
     resumen: 'Verificado · hace 41 días sin avance',
     confirmaciones: 6,
+    anonimo: false,
     autor: personas.tomas,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 212, y: 250 },
+    posicion: { latitud: -33.449665, longitud: -70.662796 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 41 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hace 39 días', detalle: '6 vecinos lo confirmaron', ocurrio: true },
@@ -5349,10 +5424,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: 'hace 2 días',
     resumen: 'Recibido · hace 2 días',
     confirmaciones: 1,
+    anonimo: false,
     autor: personas.marta,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 300, y: 470 },
+    posicion: { latitud: -33.452761, longitud: -70.659355 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 2 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', detalle: 'Cuando otros vecinos confirmen que existe', ocurrio: false },
@@ -5371,10 +5447,11 @@ export const reportesIniciales: Reporte[] = [
     publicado: 'hace 20 días',
     resumen: 'En gestión · con la Municipalidad',
     confirmaciones: 7,
+    anonimo: false,
     autor: personas.camila,
     esMio: false,
     tieneFoto: false,
-    posicion: { x: 196, y: 596 },
+    posicion: { latitud: -33.454534, longitud: -70.663422 },
     seguimiento: [
       { estado: 'recibido', fecha: 'hace 20 días', detalle: 'Quedó publicado en el mapa', ocurrio: true },
       { estado: 'verificado', fecha: 'hace 18 días', detalle: '7 vecinos lo confirmaron', ocurrio: true },
@@ -5501,7 +5578,7 @@ export const propuestasIniciales: Propuesta[] = [
         respuestas: [],
       },
     ],
-    posicion: { x: 256, y: 246 },
+    posicion: { latitud: -33.449609, longitud: -70.661076 },
     disciplinas: ['Ingeniería', 'Diseño'],
     apoyadaPorMi: false,
   },
@@ -5539,7 +5616,7 @@ export const propuestasIniciales: Propuesta[] = [
       },
     ],
     comentarios: [],
-    posicion: { x: 292, y: 602 },
+    posicion: { latitud: -33.454618, longitud: -70.659668 },
     disciplinas: ['Agronomía', 'Diseño'],
     apoyadaPorMi: true,
   },
@@ -5568,7 +5645,7 @@ export const propuestasIniciales: Propuesta[] = [
     ],
     quierenApoyar: [],
     comentarios: [],
-    posicion: { x: 256, y: 400 },
+    posicion: { latitud: -33.451776, longitud: -70.661076 },
     disciplinas: ['Diseño', 'Arquitectura', 'Ciencias sociales'],
     apoyadaPorMi: false,
   },
@@ -5628,7 +5705,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntariosNecesarios: 15,
     tareas: ['Llevar herramientas', 'Regar la primera semana', 'Difundir'],
     naceDePropuesta: 'huerta-toesca',
-    posicion: { x: 336, y: 576 },
+    posicion: { latitud: -33.454253, longitud: -70.657948 },
     miInscripcion: null,
   },
   {
@@ -5648,7 +5725,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntarios: 0,
     voluntariosNecesarios: 0,
     tareas: [],
-    posicion: { x: 150, y: 420 },
+    posicion: { latitud: -33.452057, longitud: -70.665221 },
     miInscripcion: null,
   },
   {
@@ -5669,7 +5746,7 @@ export const actividadesIniciales: Actividad[] = [
     voluntariosNecesarios: 4,
     tareas: ['Tomar fotos', 'Guiar un tramo'],
     naceDePropuesta: 'placas-casonas',
-    posicion: { x: 256, y: 400 },
+    posicion: { latitud: -33.451776, longitud: -70.661076 },
     miInscripcion: null,
   },
 ];
@@ -5767,7 +5844,7 @@ export const avisosIniciales: Aviso[] = [
 
 #### `src/datos/catastro.ts`
 
-Las doce capas del mapa y la ficha de platabanda. (38 líneas)
+Las doce capas del mapa y la ficha de platabanda. (44 líneas)
 
 ```ts
 import type { CapaDelMapa, ElementoDeCatastro } from '@/dominio/tipos';
@@ -5775,23 +5852,29 @@ import type { CapaDelMapa, ElementoDeCatastro } from '@/dominio/tipos';
 /**
  * Capas del mapa y fichas del catastro socioambiental de 2022.
  *
- * Las cifras son las del diagnostico real de Republica Circular: 40
- * microbasurales, 500 platabandas, 218 basureros, 5 puntos de reciclaje, 8
- * areas verdes y 2 eriazos, 93 bancas, 35 paraderos y 3 tramos de ciclovia.
+ * Las cifras escritas aqui son las que declara el diagnostico de Republica
+ * Circular: 40 microbasurales, 500 platabandas, 218 basureros, 5 puntos de
+ * reciclaje, 8 areas verdes y 2 eriazos, 93 bancas, 35 paraderos y 3 tramos de
+ * ciclovia. Sirven para que el prototipo sin backend muestre algo razonable.
+ *
+ * Con sesion abierta se reemplazan por lo que hay cargado, que no es lo mismo:
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
+ * kilometros del barrio. De ahi la unidad de cada capa, que es lo que permite
+ * rehacer la frase con el numero de verdad.
  */
 export const capasIniciales: CapaDelMapa[] = [
   { id: 'reportes-abiertos', nombre: 'Reportes abiertos', detalle: '', grupo: 'ahora', activa: true },
   { id: 'resueltos', nombre: 'Resueltos', detalle: 'Últimos 30 días', grupo: 'ahora', activa: true },
   { id: 'propuestas', nombre: 'Propuestas', detalle: '', grupo: 'ahora', activa: true },
   { id: 'actividades', nombre: 'Actividades', detalle: '', grupo: 'ahora', activa: true },
-  { id: 'microbasurales', nombre: 'Microbasurales', detalle: '40 puntos', grupo: 'catastro', activa: true },
-  { id: 'platabandas', nombre: 'Platabandas', detalle: '500 franjas', grupo: 'catastro', activa: false },
-  { id: 'basureros', nombre: 'Basureros', detalle: '218 en la calle', grupo: 'catastro', activa: false },
-  { id: 'reciclaje', nombre: 'Puntos de reciclaje', detalle: '5 lugares', grupo: 'catastro', activa: true },
-  { id: 'areas-verdes', nombre: 'Áreas verdes', detalle: '8 plazas y 2 eriazos', grupo: 'catastro', activa: true },
-  { id: 'bancas', nombre: 'Bancas', detalle: '93 bancas', grupo: 'catastro', activa: false },
-  { id: 'paraderos', nombre: 'Paraderos', detalle: '35 paraderos', grupo: 'catastro', activa: false },
-  { id: 'ciclovias', nombre: 'Ciclovías', detalle: '3 tramos', grupo: 'catastro', activa: false },
+  { id: 'microbasurales', nombre: 'Microbasurales', detalle: '40 puntos', unidad: 'puntos', grupo: 'catastro', activa: true },
+  { id: 'platabandas', nombre: 'Platabandas', detalle: '500 franjas', unidad: 'franjas', grupo: 'catastro', activa: false },
+  { id: 'basureros', nombre: 'Basureros', detalle: '218 en la calle', unidad: 'en la calle', grupo: 'catastro', activa: false },
+  { id: 'reciclaje', nombre: 'Puntos de reciclaje', detalle: '5 lugares', unidad: 'lugares', grupo: 'catastro', activa: true },
+  { id: 'areas-verdes', nombre: 'Áreas verdes', detalle: '8 plazas y 2 eriazos', unidad: 'plazas y eriazos', grupo: 'catastro', activa: true },
+  { id: 'bancas', nombre: 'Bancas', detalle: '93 bancas', unidad: 'bancas', grupo: 'catastro', activa: false },
+  { id: 'paraderos', nombre: 'Paraderos', detalle: '35 paraderos', unidad: 'paraderos', grupo: 'catastro', activa: false },
+  { id: 'ciclovias', nombre: 'Ciclovías', detalle: '3 tramos', unidad: 'tramos', grupo: 'catastro', activa: false },
 ];
 
 export const fichasDeCatastro: ElementoDeCatastro[] = [
@@ -5805,7 +5888,7 @@ export const fichasDeCatastro: ElementoDeCatastro[] = [
     ultimaRevision: 'Feb 2023',
     opcionesDeEstado: ['Con jardín', 'Abandonada', 'Pavimentada', 'No sé'],
     dato: 'Solo 13 de 500 platabandas tienen quien las cuide',
-    posicion: { x: 256, y: 400 },
+    posicion: { latitud: -33.451776, longitud: -70.661076 },
   },
 ];
 ```
@@ -6007,20 +6090,39 @@ export const plazosDeApoyo = ['Este semestre', 'Otoño 2027', 'Por definir'] as 
 
 #### `src/estado/barrio.tsx`
 
-Contenido compartido y todas las acciones que lo modifican. (447 líneas)
+Contenido compartido y todas las acciones que lo modifican. (577 líneas)
 
 ```tsx
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import { actividadesIniciales } from '@/datos/actividades';
 import { avisosIniciales } from '@/datos/avisos';
 import { capasIniciales } from '@/datos/catastro';
+import { conteoPorCapa } from '@/datos/catastroEnLinea';
+import { hayBackend } from '@/datos/cliente';
+import { subirFotosDeReporte } from '@/datos/fotosDeReporte';
 import { personas } from '@/datos/personas';
 import { propuestasIniciales } from '@/datos/propuestas';
 import { reportesIniciales } from '@/datos/reportes';
+import {
+  confirmarReporte as confirmarEnLinea,
+  crearReporte as crearEnLinea,
+  listarReportes as listarEnLinea,
+  senalarReporte as senalarEnLinea,
+} from '@/datos/reportesEnLinea';
 import type { IdCategoria } from '@/dominio/categorias';
 import type { IdEstado } from '@/dominio/estados';
 import { estados } from '@/dominio/estados';
+import { usarSesion } from './sesion';
+
 import type {
   Actividad,
   Aviso,
@@ -6028,6 +6130,7 @@ import type {
   Comentario,
   ModoDeParticipar,
   PosturaComentario,
+  PuntoEnMapa,
   Propuesta,
   Reporte,
 } from '@/dominio/tipos';
@@ -6048,6 +6151,9 @@ export type DatosDeReporteNuevo = {
   desdeCuando?: string;
   tieneFoto: boolean;
   anonimo: boolean;
+  posicion: PuntoEnMapa;
+  /** Rutas locales de las fotos elegidas, que se suben tras publicar. */
+  imagenes: string[];
 };
 
 export type DatosDePropuestaNueva = {
@@ -6081,6 +6187,12 @@ type ContextoBarrio = {
   capas: CapaDelMapa[];
   /** Identificador del ultimo reporte publicado, para la pantalla de cierre. */
   ultimoReportePublicado: string | null;
+  /**
+   * Ultimo problema al hablar con la base, si lo hubo. Esta aqui para que un
+   * fallo de red no desaparezca en silencio: la pantalla que quiera avisarlo
+   * lo lee, y las que no, siguen igual que antes.
+   */
+  ultimoErrorDeDatos: string | null;
 
   confirmarReporte: (id: string) => void;
   descartarReporte: (id: string) => void;
@@ -6113,12 +6225,72 @@ function nuevoId(prefijo: string): string {
 }
 
 export function ProveedorBarrio({ children }: { children: ReactNode }) {
+  // Quien publica es quien tiene la sesion abierta. Sin backend el contexto
+  // de sesion entrega la vecina de ejemplo, de modo que el prototipo sigue
+  // siendo navegable para mostrarlo.
+  const { persona } = usarSesion();
+  const autor = persona ?? personas.rosa;
+
   const [reportes, setReportes] = useState<Reporte[]>(reportesIniciales);
   const [propuestas, setPropuestas] = useState<Propuesta[]>(propuestasIniciales);
   const [actividades, setActividades] = useState<Actividad[]>(actividadesIniciales);
   const [avisos, setAvisos] = useState<Aviso[]>(avisosIniciales);
   const [capas, setCapas] = useState<CapaDelMapa[]>(capasIniciales);
   const [ultimoReportePublicado, setUltimoReportePublicado] = useState<string | null>(null);
+  const [ultimoErrorDeDatos, setUltimoErrorDeDatos] = useState<string | null>(null);
+
+  /**
+   * Manda la operacion a la base cuando hay backend configurado, y guarda el
+   * error si falla.
+   *
+   * No se espera el resultado a proposito. Las acciones de este contexto son
+   * sincronas porque asi las llaman las pantallas, y volverlas asincronas
+   * obligaria a tocar las 36. La memoria se actualiza al tiro y la base
+   * despues, que es el comportamiento que el prototipo ya tenia.
+   */
+  const sincronizar = useCallback((operacion: () => Promise<unknown>) => {
+    if (!hayBackend) return;
+    operacion().catch((error: unknown) => {
+      // Tambien a la consola. Guardarlo solo en el estado hacia que una falla
+      // al escribir en la base no dejara rastro en ninguna parte: la pantalla
+      // de cierre decia "Listo" y la foto nunca habia llegado.
+      console.error('No se pudo guardar en la base', error);
+      setUltimoErrorDeDatos(
+        error instanceof Error ? error.message : 'No se pudo guardar en la base',
+      );
+    });
+  }, []);
+
+  // Con backend configurado los datos de ejemplo son solo lo que se ve
+  // mientras llega la primera respuesta.
+  useEffect(() => {
+    if (!hayBackend) return;
+    listarEnLinea()
+      .then(setReportes)
+      .catch((error: unknown) => {
+        setUltimoErrorDeDatos(
+          error instanceof Error ? error.message : 'No se pudieron cargar los reportes',
+        );
+      });
+  }, []);
+
+  // El detalle de cada capa del catastro dice cuantos elementos tiene, y hasta
+  // ahora esa cifra venia escrita en la lista de ejemplo. No es la misma que
+  // la cargada, asi que con sesion abierta se reemplaza por lo que hay. Las
+  // tablas del catastro exigen cuenta, de ahi que dependa de la persona.
+  useEffect(() => {
+    if (!hayBackend || persona === null) return;
+    sincronizar(async () => {
+      const conteo = await conteoPorCapa();
+      setCapas((lista) =>
+        lista.map((capa) => {
+          const cuantos = conteo[capa.id];
+          if (capa.unidad === undefined || cuantos === undefined) return capa;
+          return { ...capa, detalle: `${cuantos} ${capa.unidad}` };
+        }),
+      );
+    });
+  }, [persona, sincronizar]);
 
   const cambiarUnReporte = useCallback(
     (id: string, transformar: (reporte: Reporte) => Reporte) => {
@@ -6138,8 +6310,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
           reporte.estado === 'recibido' && confirmaciones >= 3 ? 'verificado' : reporte.estado;
         return { ...reporte, confirmaciones, estado };
       });
+      sincronizar(() => confirmarEnLinea(id));
     },
-    [cambiarUnReporte],
+    [cambiarUnReporte, sincronizar],
   );
 
   const descartarReporte = useCallback(
@@ -6148,8 +6321,9 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         ...reporte,
         senalamientos: (reporte.senalamientos ?? 0) + 1,
       }));
+      sincronizar(() => senalarEnLinea(id));
     },
-    [cambiarUnReporte],
+    [cambiarUnReporte, sincronizar],
   );
 
   const cambiarEstadoDeReporte = useCallback(
@@ -6186,11 +6360,12 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       publicado: 'recién',
       resumen: 'Enviado recién',
       confirmaciones: 0,
-      autor: datos.anonimo ? null : personas.rosa,
+      anonimo: datos.anonimo,
+      autor: datos.anonimo ? null : autor,
       esMio: true,
       tieneFoto: datos.tieneFoto,
       // El punto queda donde la persona dejo el mapa en el paso de ubicacion.
-      posicion: { x: 195, y: 430 },
+      posicion: datos.posicion,
       seguimiento: [
         { estado: 'recibido', fecha: 'recién', detalle: 'Quedó publicado en el mapa', ocurrio: true },
         {
@@ -6210,8 +6385,35 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     };
     setReportes((lista) => [reporte, ...lista]);
     setUltimoReportePublicado(id);
+
+    // El identificador local sirve para que la pantalla de cierre tenga algo
+    // que mostrar al instante. Cuando la base responde con el suyo, se cambia
+    // en la lista para que los enlaces apunten al reporte de verdad.
+    sincronizar(async () => {
+      const idReal = await crearEnLinea({
+        categoria: datos.categoria,
+        titulo: datos.direccion,
+        direccion: datos.direccion,
+        posicion: datos.posicion,
+        anonimo: datos.anonimo,
+        descripcion: datos.descripcion === '' ? undefined : datos.descripcion,
+        comoSeFormo: datos.comoSeFormo,
+        desdeCuando: datos.desdeCuando,
+        tieneFoto: datos.tieneFoto,
+      });
+      setReportes((lista) =>
+        lista.map((cada) => (cada.id === id ? { ...cada, id: idReal } : cada)),
+      );
+      setUltimoReportePublicado((actual) => (actual === id ? idReal : actual));
+
+      // Las fotos se suben despues y no antes porque la ruta de cada archivo
+      // lleva el identificador del reporte, que es lo que permite a las
+      // politicas del deposito comprobar que quien sube es la autora.
+      await subirFotosDeReporte(idReal, datos.imagenes);
+    });
+
     return id;
-  }, []);
+  }, [autor, sincronizar]);
 
   const cambiarUnaPropuesta = useCallback(
     (id: string, transformar: (propuesta: Propuesta) => Propuesta) => {
@@ -6235,7 +6437,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     (id: string, texto: string, postura: PosturaComentario) => {
       const comentario: Comentario = {
         id: nuevoId('comentario'),
-        autor: personas.rosa,
+        autor,
         cuando: 'recién',
         postura,
         texto,
@@ -6247,7 +6449,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
         comentarios: [...propuesta.comentarios, comentario],
       }));
     },
-    [cambiarUnaPropuesta],
+    [autor, cambiarUnaPropuesta],
   );
 
   const marcarComentarioUtil = useCallback(
@@ -6271,7 +6473,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       titulo: datos.titulo,
       eje: datos.eje,
       etapa: 'idea',
-      autor: personas.rosa,
+      autor,
       publicada: 'publicada recién',
       idea: datos.idea,
       apoyos: 1,
@@ -6287,13 +6489,13 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       })),
       quierenApoyar: [],
       comentarios: [],
-      posicion: { x: 195, y: 430 },
+      posicion: { latitud: -33.452198, longitud: -70.663461 },
       disciplinas: datos.disciplinas,
       apoyadaPorMi: true,
     };
     setPropuestas((lista) => [propuesta, ...lista]);
     return id;
-  }, []);
+  }, [autor]);
 
   const inscribirseEnActividad = useCallback(
     (id: string, modo: ModoDeParticipar, tarea?: string) => {
@@ -6348,7 +6550,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       voluntariosNecesarios: datos.voluntariosNecesarios,
       tareas: datos.tareas,
       naceDePropuesta: datos.naceDePropuesta,
-      posicion: { x: 195, y: 430 },
+      posicion: { latitud: -33.452198, longitud: -70.663461 },
       miInscripcion: null,
     };
     setActividades((lista) => [actividad, ...lista]);
@@ -6371,7 +6573,16 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const restablecerCapas = useCallback(() => setCapas(capasIniciales), []);
+  // Restablecer vuelve a las capas que vienen encendidas, y no olvida los
+  // conteos que ya se leyeron de la base.
+  const restablecerCapas = useCallback(() => {
+    setCapas((lista) =>
+      lista.map((capa) => {
+        const inicial = capasIniciales.find((otra) => otra.id === capa.id);
+        return inicial === undefined ? capa : { ...capa, activa: inicial.activa };
+      }),
+    );
+  }, []);
 
   const avisosSinLeer = useMemo(
     () => avisos.filter((aviso) => !aviso.leido).length,
@@ -6386,6 +6597,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       avisos,
       capas,
       ultimoReportePublicado,
+      ultimoErrorDeDatos,
       confirmarReporte,
       descartarReporte,
       cambiarEstadoDeReporte,
@@ -6411,6 +6623,7 @@ export function ProveedorBarrio({ children }: { children: ReactNode }) {
       avisos,
       capas,
       ultimoReportePublicado,
+      ultimoErrorDeDatos,
       confirmarReporte,
       descartarReporte,
       cambiarEstadoDeReporte,
@@ -6461,12 +6674,16 @@ export function usarActividad(id: string | undefined): Actividad | undefined {
 
 #### `src/estado/borradores.tsx`
 
-Lo que la persona lleva escrito en los flujos de varios pasos. (110 líneas)
+Lo que la persona lleva escrito en los flujos de varios pasos. (134 líneas)
 
 ```tsx
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
+import { CENTRO_DEL_BARRIO } from '@/dominio/barrio';
 import type { IdCategoria } from '@/dominio/categorias';
+import type { PuntoEnMapa } from '@/dominio/tipos';
+
+import { usarPreferencias } from './preferencias';
 
 /**
  * Lo que la persona lleva escrito en los flujos de varios pasos.
@@ -6478,25 +6695,34 @@ import type { IdCategoria } from '@/dominio/categorias';
 
 export type BorradorDeReporte = {
   categoria: IdCategoria | null;
-  /** Cuantas fotos adjunto. El maximo del diseno es tres. */
-  fotos: number;
+  /**
+   * Las fotos adjuntas, como rutas locales del telefono. El maximo del diseno
+   * es tres. Van aqui y no en la pantalla de foto porque el paso de revision
+   * las muestra y porque al publicar hay que subirlas.
+   */
+  imagenes: string[];
   direccion: string;
   comoSeFormo: string | null;
   desdeCuando: string | null;
   descripcion: string;
   anonimo: boolean;
+  /** Donde quedo el punto al terminar el paso de ubicacion. */
+  posicion: PuntoEnMapa;
   /** Reporte parecido que se encontro cerca, si lo hubo. */
   posibleDuplicado: string | null;
 };
 
 const reporteVacio: BorradorDeReporte = {
   categoria: null,
-  fotos: 0,
+  imagenes: [],
   direccion: 'Sazié con Av. República',
   comoSeFormo: null,
   desdeCuando: null,
   descripcion: '',
   anonimo: false,
+  // Arranca al centro del barrio, que es donde el mapa abre el paso de
+  // ubicacion. Si la persona no mueve el mapa, ese es el punto que vale.
+  posicion: CENTRO_DEL_BARRIO,
   posibleDuplicado: null,
 };
 
@@ -6533,16 +6759,27 @@ type ContextoBorradores = {
 const Contexto = createContext<ContextoBorradores | null>(null);
 
 export function ProveedorBorradores({ children }: { children: ReactNode }) {
-  const [reporte, setReporte] = useState<BorradorDeReporte>(reporteVacio);
+  // El ajuste del perfil solo decide con que valor arranca el borrador. La
+  // decision de publicar sin mostrar autor se toma en cada reporte, en el paso
+  // de revision, que es donde la persona ve lo que esta por publicar.
+  const { proponerAnonimo } = usarPreferencias();
+
+  const [reporte, setReporte] = useState<BorradorDeReporte>({
+    ...reporteVacio,
+    anonimo: proponerAnonimo,
+  });
   const [propuesta, setPropuesta] = useState<BorradorDePropuesta>(propuestaVacia);
 
   const cambiarReporte = useCallback((cambios: Partial<BorradorDeReporte>) => {
     setReporte((actual) => ({ ...actual, ...cambios }));
   }, []);
 
-  const reiniciarReporte = useCallback((origen?: Partial<BorradorDeReporte>) => {
-    setReporte({ ...reporteVacio, ...origen });
-  }, []);
+  const reiniciarReporte = useCallback(
+    (origen?: Partial<BorradorDeReporte>) => {
+      setReporte({ ...reporteVacio, anonimo: proponerAnonimo, ...origen });
+    },
+    [proponerAnonimo],
+  );
 
   const cambiarPropuesta = useCallback((cambios: Partial<BorradorDePropuesta>) => {
     setPropuesta((actual) => ({ ...actual, ...cambios }));
@@ -6578,7 +6815,7 @@ export function usarBorradores(): ContextoBorradores {
 
 #### `src/estado/preferencias.tsx`
 
-Lectura y accesibilidad, persistidas en el teléfono. (111 líneas)
+Lectura y accesibilidad, persistidas en el teléfono. (120 líneas)
 
 ```tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6616,6 +6853,14 @@ export type Preferencias = {
   avisarCambioDeEstado: boolean;
   /** Avisa de actividades nuevas en el barrio. */
   avisarActividades: boolean;
+  /**
+   * Deja marcado "anonimo" al empezar un reporte.
+   *
+   * Es una sugerencia y no una regla: el anonimato se decide publicacion por
+   * publicacion, y el paso de revision siempre permite cambiarlo. Por eso
+   * tampoco viaja a la base, se queda en el telefono.
+   */
+  proponerAnonimo: boolean;
 };
 
 const preferenciasIniciales: Preferencias = {
@@ -6624,6 +6869,7 @@ const preferenciasIniciales: Preferencias = {
   menosAnimaciones: false,
   avisarCambioDeEstado: true,
   avisarActividades: true,
+  proponerAnonimo: false,
 };
 
 const CLAVE_GUARDADO = 'barrio-republica.preferencias';
@@ -7496,7 +7742,7 @@ export function Etiqueta({
 
 #### `src/componentes/base/CampoTexto.tsx`
 
-Campo de escritura. (91 líneas)
+Campo de escritura. (98 líneas)
 
 ```tsx
 import { useState } from 'react';
@@ -7508,6 +7754,13 @@ import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { familias } from '@/diseno/tipografia';
 import { usarPreferencias } from '@/estado/preferencias';
 
+/** Cada tipo de dato pide su teclado: el codigo de ingreso son solo numeros. */
+const teclados = {
+  texto: 'default',
+  correo: 'email-address',
+  numero: 'number-pad',
+} as const;
+
 type PropsCampoTexto = {
   valor: string;
   onCambiar: (valor: string) => void;
@@ -7518,7 +7771,7 @@ type PropsCampoTexto = {
   /** Un campo de varias lineas crece segun las filas pedidas. */
   lineas?: number;
   maximoDeCaracteres?: number;
-  tipoDeTeclado?: 'texto' | 'correo';
+  tipoDeTeclado?: 'texto' | 'correo' | 'numero';
   autoenfocar?: boolean;
 };
 
@@ -7560,8 +7813,8 @@ export function CampoTexto({
         maxLength={maximoDeCaracteres}
         autoFocus={autoenfocar}
         allowFontScaling={false}
-        keyboardType={tipoDeTeclado === 'correo' ? 'email-address' : 'default'}
-        autoCapitalize={tipoDeTeclado === 'correo' ? 'none' : 'sentences'}
+        keyboardType={teclados[tipoDeTeclado]}
+        autoCapitalize={tipoDeTeclado === 'texto' ? 'sentences' : 'none'}
         accessibilityLabel={etiqueta ?? marcaDeAgua}
         style={{
           borderRadius: radio.boton,
@@ -8443,7 +8696,7 @@ export function Pantalla({
 
 #### `src/componentes/app/index.ts`
 
-Punto único de entrada. (26 líneas)
+Punto único de entrada. (21 líneas)
 
 ```ts
 /**
@@ -8456,12 +8709,7 @@ export { BarraNavegacion } from './BarraNavegacion';
 export { Encabezado } from './Encabezado';
 export { EtiquetaDeEstado, EtiquetaDeEtapa } from './EtiquetasDeDominio';
 export { FotoSimulada } from './FotoSimulada';
-export {
-  ALTO_DEL_PLANO,
-  ANCHO_DEL_PLANO,
-  MapaBarrio,
-  type Ubicador,
-} from './MapaBarrio';
+export { MapaBarrio, type Ubicador } from './MapaBarrio';
 export { LineaDeTiempo } from './LineaDeTiempo';
 export { ChipDeCategoria, MarcaDeCategoria, RotuloDeCategoria } from './MarcaDeCategoria';
 export { GrupoDeMarcadores, MarcadorMapa, MiUbicacion } from './MarcadorMapa';
@@ -9470,146 +9718,368 @@ function PasoDeLaLinea({
 
 #### `src/componentes/app/MapaBarrio.tsx`
 
-El plano del barrio dibujado en SVG. (140 líneas)
+El plano del barrio dibujado en SVG. (362 líneas)
 
 ```tsx
-import { useState, type ReactNode } from 'react';
-import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
-import Svg, { G, Path, Rect, Text as TextoSvg } from 'react-native-svg';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  Image,
+  PanResponder,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
+import { Presionable, Texto } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
-import type { PuntoEnMapa } from '@/dominio/tipos';
-import { familias } from '@/diseno/tipografia';
+import { espacio, radio, sombras } from '@/diseno/medidas';
+import {
+  CENTRO_DEL_BARRIO,
+  MARGEN_FUERA_DEL_BARRIO,
+  RECUADRO_DEL_BARRIO,
+  ZOOM_DEL_BARRIO,
+  ZOOM_MAXIMO,
+  ZOOM_MINIMO,
+} from '@/dominio/barrio';
+import type { PuntoEnMapa, RecuadroDelMapa } from '@/dominio/tipos';
+import { LADO_DE_TESELA, aCoordenada, aPixeles, direccionDeTesela } from '@/utiles/geografia';
 
-/** Tamano del plano del barrio en las coordenadas del diseno. */
-export const ANCHO_DEL_PLANO = 390;
-export const ALTO_DEL_PLANO = 844;
-
-/**
- * Calles del Barrio Republica dibujadas a escala del mockup. El eje horizontal
- * grueso de arriba es la Alameda, que marca el limite norte del barrio.
- */
-const CALLES_ANCHAS = 'M0 74H390';
-const CALLES_HORIZONTALES = 'M0 212H390M0 342H390M0 472H390M0 602H390M0 732H390';
-
-const nombresDeCalle = [
-  { texto: 'ALAMEDA', x: 236, y: 70 },
-  { texto: 'SAZIÉ', x: 132, y: 208 },
-  { texto: 'GRAJALES', x: 132, y: 338 },
-  { texto: 'DOMEYKO', x: 132, y: 468 },
-  { texto: 'TOESCA', x: 132, y: 598 },
-  { texto: 'GORBEA', x: 300, y: 728 },
-];
-
-const nombresDeAvenida = [
-  { texto: 'AV. REPÚBLICA', x: 206, y: 300 },
-  { texto: 'AV. EJÉRCITO', x: 296, y: 430 },
-  { texto: 'AV. ESPAÑA', x: 34, y: 700 },
-];
-
-/** Convierte un punto del plano a la posicion que ocupa en la pantalla. */
+/** Convierte un punto del mapa a la posicion que ocupa en la pantalla. */
 export type Ubicador = (punto: PuntoEnMapa, tamanoDelMarcador: number) => ViewStyle;
 
 type PropsMapaBarrio = {
-  /** Recibe el ubicador para colocar marcadores encima del plano. */
+  /** Recibe el ubicador para colocar marcadores encima del mapa. */
   children?: (ubicar: Ubicador) => ReactNode;
   style?: StyleProp<ViewStyle>;
-  /** Desplaza el plano para encuadrar otra parte del barrio. */
-  desplazamiento?: PuntoEnMapa;
+  centro?: PuntoEnMapa;
+  zoom?: number;
+  /** Avisa donde quedo el centro al terminar un arrastre. */
+  alMoverse?: (centro: PuntoEnMapa) => void;
+  /**
+   * Avisa que area quedo a la vista, para que la pantalla pida a la base solo
+   * los elementos que entran ahi.
+   *
+   * Tiene que venir envuelta en useCallback: se llama desde un efecto que
+   * depende de ella, y una funcion nueva en cada render haria un ciclo.
+   */
+  alCambiarElArea?: (recuadro: RecuadroDelMapa, zoom: number) => void;
+  /** Las fichas muestran el mapa como ilustracion y no se arrastran. */
+  interactivo?: boolean;
 };
 
+type Arrastre = {
+  x: number;
+  y: number;
+};
+
+const SIN_ARRASTRE: Arrastre = { x: 0, y: 0 };
+
+/** Cuanto hay que mover el dedo antes de que el gesto cuente como arrastre. */
+const UMBRAL_DE_ARRASTRE = 3;
+
 /**
- * Plano del barrio.
+ * Mapa del barrio sobre teselas de OpenStreetMap.
  *
- * En el prototipo las calles se dibujan a mano con las mismas proporciones del
- * diseno, lo que permite mostrar el recorrido completo sin depender de una
- * llave de servicio ni de conexion. La decision de stack del proyecto es
- * OpenStreetMap: cuando se integre, se reemplaza este componente y los
- * marcadores siguen funcionando igual, porque ya reciben su posicion desde
- * fuera.
+ * Las teselas se dibujan con el componente Image y la proyeccion se calcula a
+ * mano, sin libreria de mapas. Es deliberado: el proyecto no usa librerias de
+ * interfaz de terceros, y una libreria de mapas obligaria a un development
+ * build, lo que dejaria fuera el flujo de Expo Go y el navegador, que son las
+ * dos formas en que hoy se muestra el prototipo.
+ *
+ * Los marcadores siguen viviendo fuera, como componentes de React Native
+ * encima del mapa, y reciben su posicion por el ubicador. Por eso el cambio de
+ * plano dibujado a mapa real no toco ninguno de ellos.
  */
-export function MapaBarrio({ children, style, desplazamiento }: PropsMapaBarrio) {
-  const [medida, setMedida] = useState({ ancho: ANCHO_DEL_PLANO, alto: ALTO_DEL_PLANO });
+export function MapaBarrio({
+  children,
+  style,
+  centro: centroInicial = CENTRO_DEL_BARRIO,
+  zoom: zoomInicial = ZOOM_DEL_BARRIO,
+  alMoverse,
+  alCambiarElArea,
+  interactivo = true,
+}: PropsMapaBarrio) {
+  const [medida, setMedida] = useState({ ancho: 390, alto: 844 });
+  const [centro, setCentro] = useState<PuntoEnMapa>(centroInicial);
+  const [arrastre, setArrastre] = useState<Arrastre>(SIN_ARRASTRE);
+  const [zoom, setZoom] = useState(zoomInicial);
+
+  // El gesto necesita leer el centro y el zoom vigentes sin volver a crearse en
+  // cada render, porque recrear el PanResponder a mitad de un arrastre corta el
+  // movimiento.
+  const vigente = useRef({ centro, zoom });
+  vigente.current = { centro, zoom };
 
   function alMedir(evento: LayoutChangeEvent) {
     const { width, height } = evento.nativeEvent.layout;
     setMedida({ ancho: width, alto: height });
   }
 
-  // El plano se agranda hasta cubrir todo el espacio disponible y se centra, de
-  // modo que no quedan franjas vacias en telefonos de cualquier proporcion.
-  const escala = Math.max(medida.ancho / ANCHO_DEL_PLANO, medida.alto / ALTO_DEL_PLANO);
-  const anchoDibujado = ANCHO_DEL_PLANO * escala;
-  const altoDibujado = ALTO_DEL_PLANO * escala;
-  const izquierda = (medida.ancho - anchoDibujado) / 2 - (desplazamiento?.x ?? 0) * escala;
-  const arriba = (medida.alto - altoDibujado) / 2 - (desplazamiento?.y ?? 0) * escala;
+  const gesto = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => false,
+        onMoveShouldSetPanResponder: (_evento, estado) =>
+          interactivo &&
+          (Math.abs(estado.dx) > UMBRAL_DE_ARRASTRE || Math.abs(estado.dy) > UMBRAL_DE_ARRASTRE),
+        onPanResponderMove: (_evento, estado) => {
+          setArrastre({ x: estado.dx, y: estado.dy });
+        },
+        onPanResponderRelease: (_evento, estado) => {
+          const { centro: centroVigente, zoom: zoomVigente } = vigente.current;
+          const pixeles = aPixeles(centroVigente, zoomVigente);
+          const movido = aCoordenada(
+            { x: pixeles.x - estado.dx, y: pixeles.y - estado.dy },
+            zoomVigente,
+          );
+          const limitado = dentroDelBarrio(movido);
+          setCentro(limitado);
+          setArrastre(SIN_ARRASTRE);
+          alMoverse?.(limitado);
+        },
+        onPanResponderTerminate: () => setArrastre(SIN_ARRASTRE),
+      }),
+    [interactivo, alMoverse],
+  );
 
-  const ubicar: Ubicador = (punto, tamanoDelMarcador) => ({
-    position: 'absolute',
-    left: izquierda + punto.x * escala - tamanoDelMarcador / 2,
-    top: arriba + punto.y * escala - tamanoDelMarcador / 2,
-  });
+  const centroEnPixeles = aPixeles(centro, zoom);
+  const izquierdaDelMundo = centroEnPixeles.x - arrastre.x - medida.ancho / 2;
+  const arribaDelMundo = centroEnPixeles.y - arrastre.y - medida.alto / 2;
+
+  const ubicar: Ubicador = (punto, tamanoDelMarcador) => {
+    const pixeles = aPixeles(punto, zoom);
+    return {
+      position: 'absolute',
+      left: pixeles.x - izquierdaDelMundo - tamanoDelMarcador / 2,
+      top: pixeles.y - arribaDelMundo - tamanoDelMarcador / 2,
+    };
+  };
+
+  const teselas = teselasVisibles(izquierdaDelMundo, arribaDelMundo, medida, zoom);
+
+  // Se avisa al terminar el gesto y no durante, porque arrastrar dispararia
+  // una consulta por cada fotograma.
+  useEffect(() => {
+    if (alCambiarElArea === undefined) return;
+    alCambiarElArea(areaALaVista(centro, zoom, medida), zoom);
+  }, [alCambiarElArea, centro, zoom, medida]);
+
+  function cambiarZoom(paso: number) {
+    setZoom((actual) => Math.min(ZOOM_MAXIMO, Math.max(ZOOM_MINIMO, actual + paso)));
+  }
 
   return (
     <View
       onLayout={alMedir}
       style={[{ flex: 1, backgroundColor: colores.mapaFondo, overflow: 'hidden' }, style]}
+      {...gesto.panHandlers}
     >
-      <Svg
-        width={anchoDibujado}
-        height={altoDibujado}
-        viewBox={`0 0 ${ANCHO_DEL_PLANO} ${ALTO_DEL_PLANO}`}
-        style={{ position: 'absolute', left: izquierda, top: arriba }}
-      >
-        <Rect width={ANCHO_DEL_PLANO} height={ALTO_DEL_PLANO} fill={colores.mapaFondo} />
-
-        <Rect x={38} y={222} width={76} height={110} rx={6} fill={colores.mapaVerde} />
-        <Rect x={212} y={482} width={70} height={108} rx={6} fill={colores.mapaVerde} />
-        <Rect x={300} y={352} width={62} height={40} rx={5} fill={colores.mapaManzana} />
-
-        <G stroke={colores.mapaCalle} fill="none">
-          <Path d={CALLES_ANCHAS} strokeWidth={28} />
-          <Path d={CALLES_HORIZONTALES} strokeWidth={11} />
-          <Path d="M30 0V844" strokeWidth={12} />
-          <Path d="M120 0V844" strokeWidth={9} />
-          <Path d="M202 0V844" strokeWidth={18} />
-          <Path d="M292 0V844" strokeWidth={16} />
-          <Path d="M372 0V844" strokeWidth={10} />
-        </G>
-
-        {/* Linea segmentada sobre la Alameda: es el limite norte del barrio. */}
-        <Path d={CALLES_ANCHAS} stroke={colores.mapaLimite} strokeWidth={2} strokeDasharray="8 8" />
-
-        <G fill={colores.mapaTexto}>
-          {nombresDeCalle.map((calle) => (
-            <TextoSvg
-              key={calle.texto}
-              x={calle.x}
-              y={calle.y}
-              fontSize={10}
-              fontFamily={familias.textoFuerte}
-              letterSpacing={0.4}
-            >
-              {calle.texto}
-            </TextoSvg>
-          ))}
-          {nombresDeAvenida.map((avenida) => (
-            <TextoSvg
-              key={avenida.texto}
-              x={avenida.x}
-              y={avenida.y}
-              fontSize={10}
-              fontFamily={familias.textoFuerte}
-              letterSpacing={0.4}
-              transform={`rotate(90 ${avenida.x} ${avenida.y})`}
-            >
-              {avenida.texto}
-            </TextoSvg>
-          ))}
-        </G>
-      </Svg>
+      {teselas.map((tesela) => (
+        <Image
+          key={`${tesela.zoom}-${tesela.columna}-${tesela.fila}`}
+          source={{ uri: direccionDeTesela(tesela.columna, tesela.fila, tesela.zoom) }}
+          style={{
+            position: 'absolute',
+            left: tesela.izquierda,
+            top: tesela.arriba,
+            width: LADO_DE_TESELA,
+            height: LADO_DE_TESELA,
+          }}
+          // El mapa es decorativo para el lector de pantalla: lo que importa
+          // son los marcadores, que si se anuncian uno por uno.
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      ))}
 
       {children?.(ubicar)}
+
+      {interactivo ? <ControlesDeZoom alCambiar={cambiarZoom} zoom={zoom} /> : null}
+
+      <Atribucion />
+    </View>
+  );
+}
+
+/** Los cuatro bordes de lo que cabe en pantalla con este centro y este zoom. */
+function areaALaVista(
+  centro: PuntoEnMapa,
+  zoom: number,
+  medida: { ancho: number; alto: number },
+): RecuadroDelMapa {
+  const centroEnPixeles = aPixeles(centro, zoom);
+  const noroeste = aCoordenada(
+    { x: centroEnPixeles.x - medida.ancho / 2, y: centroEnPixeles.y - medida.alto / 2 },
+    zoom,
+  );
+  const sureste = aCoordenada(
+    { x: centroEnPixeles.x + medida.ancho / 2, y: centroEnPixeles.y + medida.alto / 2 },
+    zoom,
+  );
+  return {
+    norte: noroeste.latitud,
+    oeste: noroeste.longitud,
+    sur: sureste.latitud,
+    este: sureste.longitud,
+  };
+}
+
+/** Deja el centro dentro del barrio, con holgura para asomarse al borde. */
+function dentroDelBarrio(punto: PuntoEnMapa): PuntoEnMapa {
+  const margen = MARGEN_FUERA_DEL_BARRIO;
+  return {
+    latitud: Math.min(
+      RECUADRO_DEL_BARRIO.norte + margen,
+      Math.max(RECUADRO_DEL_BARRIO.sur - margen, punto.latitud),
+    ),
+    longitud: Math.min(
+      RECUADRO_DEL_BARRIO.este + margen,
+      Math.max(RECUADRO_DEL_BARRIO.oeste - margen, punto.longitud),
+    ),
+  };
+}
+
+type TeselaDibujada = {
+  columna: number;
+  fila: number;
+  zoom: number;
+  izquierda: number;
+  arriba: number;
+};
+
+/** Las teselas que alcanzan a verse en el recuadro visible, y donde van. */
+function teselasVisibles(
+  izquierdaDelMundo: number,
+  arribaDelMundo: number,
+  medida: { ancho: number; alto: number },
+  zoom: number,
+): TeselaDibujada[] {
+  const ultima = 2 ** zoom - 1;
+  const primeraColumna = Math.floor(izquierdaDelMundo / LADO_DE_TESELA);
+  const ultimaColumna = Math.floor((izquierdaDelMundo + medida.ancho) / LADO_DE_TESELA);
+  const primeraFila = Math.floor(arribaDelMundo / LADO_DE_TESELA);
+  const ultimaFila = Math.floor((arribaDelMundo + medida.alto) / LADO_DE_TESELA);
+
+  const dibujadas: TeselaDibujada[] = [];
+  for (let columna = primeraColumna; columna <= ultimaColumna; columna += 1) {
+    for (let fila = primeraFila; fila <= ultimaFila; fila += 1) {
+      // Arriba y abajo el mundo se acaba, asi que esas filas no existen. A los
+      // lados en cambio da la vuelta, aunque en el barrio no llegue a pasar.
+      if (fila < 0 || fila > ultima) continue;
+      dibujadas.push({
+        columna: ((columna % (ultima + 1)) + ultima + 1) % (ultima + 1),
+        fila,
+        zoom,
+        izquierda: columna * LADO_DE_TESELA - izquierdaDelMundo,
+        arriba: fila * LADO_DE_TESELA - arribaDelMundo,
+      });
+    }
+  }
+  return dibujadas;
+}
+
+/** Botones de acercar y alejar, apilados como en los mockups. */
+function ControlesDeZoom({
+  alCambiar,
+  zoom,
+}: {
+  alCambiar: (paso: number) => void;
+  zoom: number;
+}) {
+  return (
+    <View
+      style={[
+        {
+          position: 'absolute',
+          right: espacio.amplio,
+          top: '40%',
+          borderRadius: radio.caja,
+          backgroundColor: colores.papel,
+          overflow: 'hidden',
+        },
+        sombras.flotante,
+      ]}
+    >
+      <BotonDeZoom
+        accesibilidad="Acercar el mapa"
+        activo={zoom < ZOOM_MAXIMO}
+        onPress={() => alCambiar(1)}
+      >
+        <View style={barraDeZoom} />
+        <View style={[barraDeZoom, { position: 'absolute', transform: [{ rotate: '90deg' }] }]} />
+      </BotonDeZoom>
+      <View style={{ height: 1, backgroundColor: colores.mapaLimite }} />
+      <BotonDeZoom
+        accesibilidad="Alejar el mapa"
+        activo={zoom > ZOOM_MINIMO}
+        onPress={() => alCambiar(-1)}
+      >
+        <View style={barraDeZoom} />
+      </BotonDeZoom>
+    </View>
+  );
+}
+
+const barraDeZoom: ViewStyle = {
+  width: 16,
+  height: 2.5,
+  borderRadius: 2,
+  backgroundColor: colores.verde,
+};
+
+function BotonDeZoom({
+  children,
+  accesibilidad,
+  activo,
+  onPress,
+}: {
+  children: ReactNode;
+  accesibilidad: string;
+  activo: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Presionable
+      onPress={activo ? onPress : undefined}
+      accessibilityRole="button"
+      accessibilityLabel={accesibilidad}
+      accessibilityState={{ disabled: !activo }}
+      style={{
+        // Las zonas tocables del sistema visual no bajan de 44.
+        width: 44,
+        height: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: activo ? 1 : 0.35,
+      }}
+    >
+      {children}
+    </Presionable>
+  );
+}
+
+/**
+ * Atribucion de OpenStreetMap. No es decorativa: la licencia de los datos
+ * obliga a mostrarla en cualquier vista que use sus teselas.
+ */
+function Atribucion() {
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        bottom: 0,
+        paddingHorizontal: espacio.corto,
+        paddingVertical: 2,
+        borderTopRightRadius: radio.boton - 2,
+        backgroundColor: 'rgba(255,255,255,0.78)',
+      }}
+    >
+      <Texto tamano={10.5} color={colores.mapaTexto}>
+        © OpenStreetMap
+      </Texto>
     </View>
   );
 }
@@ -9833,14 +10303,14 @@ export function FotoSimulada({ alto, rotulo, accesibilidad, style }: PropsFotoSi
 
 #### `app/_layout.tsx`
 
-Raíz: tipografías, proveedores y la pila principal. (73 líneas)
+Raíz: tipografías, proveedores y la pila principal. (110 líneas)
 
 ```tsx
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack, usePathname, useRootNavigationState } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -9849,11 +10319,45 @@ import { archivosDeFuente } from '@/diseno/tipografia';
 import { ProveedorBarrio } from '@/estado/barrio';
 import { ProveedorBorradores } from '@/estado/borradores';
 import { ProveedorPreferencias } from '@/estado/preferencias';
+import { ProveedorSesion, usarSesion } from '@/estado/sesion';
 
 // La pantalla de carga se mantiene hasta que las dos tipografias esten listas.
 // Si se deja pasar antes, el primer cuadro se dibuja con la letra del sistema y
 // se ve un salto feo.
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+/**
+ * La cuenta obligatoria tiene que ser una puerta y no un camino.
+ *
+ * Sin esto la obligacion solo valia mientras alguien siguiera el recorrido de
+ * bienvenida: en el navegador basta escribir la direccion, y en el telefono la
+ * aplicacion vuelve a abrirse donde se cerro. Quien llegara sin sesion veia el
+ * barrio de ejemplo mientras la base le rechazaba todo, que es la peor de las
+ * dos cosas: parece que funciona y no guarda nada.
+ */
+function Puerta({ children }: { children: ReactNode }) {
+  const { estado } = usarSesion();
+  const camino = usePathname();
+  const navegacion = useRootNavigationState();
+
+  // La bienvenida y el registro son el unico lugar donde se puede estar sin
+  // haber entrado.
+  const enElIngreso = camino === '/' || camino.startsWith('/ingreso');
+
+  useEffect(() => {
+    // Abriendo la aplicacion directo en una direccion, la sesion se resuelve
+    // antes de que el navegador exista y la redireccion se perderia en
+    // silencio, que fue justo lo que paso al probarlo.
+    if (navegacion?.key === undefined) return;
+    if (estado === 'cargando' || estado === 'sinBackend' || estado === 'dentro') return;
+    if (enElIngreso) return;
+    // Con sesion abierta y sin seudonimo falta solo la mitad del registro, pero
+    // el paso que lo crea vive en el mismo recorrido.
+    router.replace(estado === 'sinPerfil' ? '/ingreso/cuenta' : '/');
+  }, [estado, enElIngreso, navegacion?.key]);
+
+  return <>{children}</>;
+}
 
 export default function DisposicionRaiz() {
   const [fuentesListas, errorDeFuentes] = useFonts(archivosDeFuente);
@@ -9872,9 +10376,11 @@ export default function DisposicionRaiz() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ProveedorPreferencias>
-          <ProveedorBarrio>
+          <ProveedorSesion>
+            <ProveedorBarrio>
             <ProveedorBorradores>
               <StatusBar style="auto" />
+              <Puerta>
               <Stack
                 screenOptions={{
                   headerShown: false,
@@ -9900,10 +10406,11 @@ export default function DisposicionRaiz() {
                   name="actividades/inscripcion"
                   options={{ animation: 'fade_from_bottom' }}
                 />
-                <Stack.Screen name="reportar/enviado" options={{ animation: 'fade' }} />
               </Stack>
+              </Puerta>
             </ProveedorBorradores>
-          </ProveedorBarrio>
+            </ProveedorBarrio>
+          </ProveedorSesion>
         </ProveedorPreferencias>
       </SafeAreaProvider>
     </GestureHandlerRootView>
@@ -9991,7 +10498,7 @@ export default function DisposicionDeReportar() {
 
 #### `app/index.tsx`
 
-1.1 Bienvenida. (208 líneas)
+1.1 Bienvenida. (204 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -10004,9 +10511,17 @@ import type { NombreIcono } from '@/diseno/iconos';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { usarPreferencias } from '@/estado/preferencias';
 
-/** Las tres promesas de la aplicacion, en el orden del mockup. */
+/**
+ * Las tres promesas de la aplicacion, en el orden del mockup.
+ *
+ * La primera decia "sin crear cuenta", que era cierto hasta el 19 de octubre.
+ * Desde que la cuenta es obligatoria, dejarla asi seria prometer algo que la
+ * pantalla siguiente desmiente. Lo que se conserva es la promesa de fondo, que
+ * es la rapidez, porque la barrera que aparecio en terreno era el tiempo del
+ * registro y no el registro en si.
+ */
 const promesas: { icono: NombreIcono; texto: string }[] = [
-  { icono: 'pin', texto: 'Reporta en un minuto, sin crear cuenta' },
+  { icono: 'pin', texto: 'Reporta en un minuto, sin contraseñas' },
   { icono: 'visto', texto: 'Mira en qué va cada reporte' },
   { icono: 'personas', texto: 'Propón soluciones con tus vecinos' },
 ];
@@ -10014,9 +10529,11 @@ const promesas: { icono: NombreIcono; texto: string }[] = [
 /**
  * 1.1 Bienvenida.
  *
- * La primera pantalla ya ofrece reportar sin cuenta, porque el levantamiento en
- * terreno mostro que la friccion del registro es la principal barrera de
- * adopcion declarada por los vecinos.
+ * Es la unica pantalla, junto con el registro, a la que se llega sin haber
+ * entrado. La friccion del registro fue la principal barrera de adopcion
+ * declarada en terreno, y la respuesta a eso no es saltarse la cuenta, que la
+ * contraparte descarto el 19 de octubre, sino que crearla cueste un correo y
+ * un codigo de seis numeros.
  */
 export default function Bienvenida() {
   const { menosAnimaciones, rotarTamanoDeTexto, factorTexto } = usarPreferencias();
@@ -10139,20 +10656,6 @@ export default function Bienvenida() {
               tamanoDeTexto={17}
               onPress={() => router.push('/ingreso/cuenta')}
             />
-            <Presionable
-              onPress={() => router.push('/reportar/categoria')}
-              accessibilityRole="button"
-              accessibilityLabel="Solo quiero reportar algo ahora"
-              style={{ minHeight: alturaTocable.minima, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Texto
-                tamano={16}
-                color={colores.textoTenueSobreBosque}
-                style={{ textDecorationLine: 'underline' }}
-              >
-                Solo quiero reportar algo ahora
-              </Texto>
-            </Presionable>
           </Columna>
         </Columna>
       </Columna>
@@ -10463,7 +10966,7 @@ export default function Intereses() {
 
 #### `app/ingreso/cuenta.tsx`
 
-1.4 Perfil opcional sin contraseña. (124 líneas)
+1.4 Perfil opcional sin contraseña. (168 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -10485,22 +10988,57 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio } from '@/diseno/medidas';
+import { usarSesion } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /**
- * 1.4 Perfil opcional sin contrasena.
+ * 1.4 Crear la cuenta.
  *
- * El registro es la barrera de adopcion que mas aparecio en terreno, asi que
- * aqui no se pide nombre real ni RUT, no hay contrasenas y siempre queda la
- * salida de seguir sin cuenta.
+ * Desde el 19 de octubre la cuenta es obligatoria para entrar, porque sin
+ * ella cualquiera podria crearse varias identidades e inflar la priorizacion
+ * comunitaria. Lo que se conserva de la version anterior es lo que el terreno
+ * pidio: no se pide nombre real ni RUT, y no hay contrasenas, porque la
+ * friccion del registro fue la barrera de abandono mas mencionada y el Banco
+ * del Tiempo murio en parte por no tener recuperacion de contrasenas.
+ *
+ * El seudonimo se pide aqui pero se guarda despues de confirmar el codigo:
+ * crear el perfil exige una sesion abierta.
  */
 export default function Cuenta() {
   const volver = crearVolver('/ingreso/intereses');
-  const [seudonimo, setSeudonimo] = useState('Rosa');
+  const { pedirCodigo, estado } = usarSesion();
+  const [seudonimo, setSeudonimo] = useState('');
   const [correo, setCorreo] = useState('');
-  const [aceptaNormas, setAceptaNormas] = useState(true);
+  const [aceptaNormas, setAceptaNormas] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const puedeEnviar = seudonimo.trim().length > 0 && correo.includes('@') && aceptaNormas;
+  const puedeEnviar =
+    seudonimo.trim().length >= 2 && correo.includes('@') && aceptaNormas && !enviando;
+
+  async function enviar() {
+    // Sin credenciales configuradas no hay a quien pedirle el codigo, y el
+    // prototipo tiene que seguir siendo navegable asi: es como se muestra en
+    // reuniones y como lo corre quien clona el repositorio.
+    if (estado === 'sinBackend') {
+      router.replace('/inicio');
+      return;
+    }
+
+    setEnviando(true);
+    setError(null);
+    try {
+      await pedirCodigo(correo);
+      router.push({
+        pathname: '/ingreso/codigo',
+        params: { correo: correo.trim().toLowerCase(), seudonimo: seudonimo.trim() },
+      });
+    } catch (falla: unknown) {
+      setError(falla instanceof Error ? falla.message : 'No se pudo enviar el código');
+    } finally {
+      setEnviando(false);
+    }
+  }
 
   return (
     <Pantalla>
@@ -10518,9 +11056,9 @@ export default function Cuenta() {
           contentContainerStyle={{ paddingBottom: espacio.seccion }}
         >
           <Columna separacion={espacio.normal} style={{ paddingHorizontal: espacio.bloque }}>
-            <Etiqueta texto="Opcional" fondo={colores.menta} color={colores.verde} alto={30} tamanoDeTexto={13.5} />
+            <Etiqueta texto="Paso final" fondo={colores.menta} color={colores.verde} alto={30} tamanoDeTexto={13.5} />
             <Texto tamano={32} familia="titulo" interlineado={1.08}>
-              Crea tu perfil para recibir avisos
+              Crea tu cuenta del barrio
             </Texto>
             <Texto tamano={17} color={colores.grisTexto} interlineado={1.45}>
               Te avisamos cuando tu reporte avance. No pedimos tu nombre real ni tu RUT.
@@ -10568,24 +11106,33 @@ export default function Cuenta() {
       </KeyboardAvoidingView>
 
       <BarraInferior>
+        {error === null ? null : (
+          <Aviso tono="cuidado">
+            <Texto tamano={15} interlineado={1.4}>
+              {error}
+            </Texto>
+          </Aviso>
+        )}
         <Boton
-          texto="Enviarme el código"
+          texto={
+            estado === 'sinBackend'
+              ? 'Entrar al barrio'
+              : enviando
+                ? 'Enviando...'
+                : 'Enviarme el código'
+          }
           icono="sobre"
           alto={56}
           tamanoDeTexto={18}
           deshabilitado={!puedeEnviar}
-          onPress={() => router.replace('/inicio')}
+          onPress={() => void enviar()}
           vibrar
         />
-        <Boton
-          texto="Seguir sin cuenta"
-          variante="secundaria"
-          tamanoDeTexto={17}
-          onPress={() => router.replace('/inicio')}
-        />
-        <Texto tamano={14} color={colores.grisTexto} alineacion="center">
-          Sin cuenta igual puedes reportar y mirar el mapa.
-        </Texto>
+        {estado === 'sinBackend' ? null : (
+          <Texto tamano={14} color={colores.grisTexto} alineacion="center">
+            Llega en unos segundos. Revisa también el correo no deseado.
+          </Texto>
+        )}
       </BarraInferior>
     </Pantalla>
   );
@@ -10596,7 +11143,7 @@ export default function Cuenta() {
 
 #### `app/(barrio)/inicio.tsx`
 
-2.1 Inicio (feed). (285 líneas)
+2.1 Inicio (feed). (286 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -10621,13 +11168,13 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import type { NombreIcono } from '@/diseno/iconos';
 import { espacio, radio } from '@/diseno/medidas';
 import { estados } from '@/dominio/estados';
 import { usarBarrio } from '@/estado/barrio';
 import { usarPreferencias } from '@/estado/preferencias';
+import { usarQuienEntro } from '@/estado/sesion';
 
 /** Pestanas que filtran el feed. */
 const pestanas = ['Todo', 'Propuestas', 'Actividades', 'Reportes'] as const;
@@ -10651,6 +11198,7 @@ export default function Inicio() {
   const { reportes, propuestas, actividades, confirmarReporte, descartarReporte, apoyarPropuesta } =
     usarBarrio();
   const { menosAnimaciones } = usarPreferencias();
+  const quienEntro = usarQuienEntro();
   const [pestanaActiva, setPestanaActiva] = useState<Pestana>('Todo');
   const [confirmacionRespondida, setConfirmacionRespondida] = useState(false);
 
@@ -10691,7 +11239,7 @@ export default function Inicio() {
             </Texto>
           </Fila>
           <Texto tamano={30} familia="titulo" interlineado={1.1}>
-            {`Hola, ${personas.rosa.nombre}`}
+            {`Hola, ${quienEntro.nombre}`}
           </Texto>
         </Columna>
         <Presionable
@@ -10699,7 +11247,7 @@ export default function Inicio() {
           accessibilityRole="button"
           accessibilityLabel="Mi perfil y ajustes"
         >
-          <Avatar persona={personas.rosa} tamano={48} conAro />
+          <Avatar persona={quienEntro} tamano={48} conAro />
         </Presionable>
       </Fila>
 
@@ -10888,11 +11436,11 @@ export default function Inicio() {
 
 #### `app/(barrio)/mapa.tsx`
 
-2.2 Mapa del barrio. (288 líneas)
+2.2 Mapa del barrio. (356 líneas)
 
 ```tsx
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
@@ -10908,17 +11456,31 @@ import {
 import { Boton, Chip, Columna, Fila, Icono, Presionable, Texto } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio, sombras } from '@/diseno/medidas';
+import type { IdCapaDelCatastro } from '@/dominio/capas';
+import { capasDelCatastro, colorDelElemento, esCapaDelCatastro } from '@/dominio/capas';
 import { categorias } from '@/dominio/categorias';
 import { familias } from '@/diseno/tipografia';
 import { usarBarrio } from '@/estado/barrio';
+import { usarElementosDelCatastro } from '@/estado/catastro';
+import type { ElementoEnElMapa } from '@/dominio/tipos';
 import { usarPreferencias } from '@/estado/preferencias';
+import { agruparEnPantalla } from '@/utiles/agrupacion';
 
 /** Filtros del carril superior del mapa. */
 const filtros = ['Todo', 'Reportes', 'Propuestas', 'Actividades'] as const;
 type Filtro = (typeof filtros)[number];
 
+/**
+ * Lado de la celda con que se agrupan las chinchetas del catastro.
+ *
+ * Son 44 px, la misma medida minima que el sistema visual exige para una zona
+ * tocable: por debajo de eso dos chinchetas se pisan y dejan de poder tocarse
+ * por separado.
+ */
+const LADO_DE_AGRUPACION = 44;
+
 /** Donde esta parada la persona dentro del plano. */
-const UBICACION_PROPIA = { x: 239, y: 519 };
+const UBICACION_PROPIA = { latitud: -33.453450, longitud: -70.661741 };
 
 /**
  * 2.2 Mapa del barrio.
@@ -10928,7 +11490,20 @@ const UBICACION_PROPIA = { x: 239, y: 519 };
  * repartida entre un tablero congelado y los grupos de mensajeria.
  */
 export default function Mapa() {
-  const { reportes, propuestas, actividades, confirmarReporte } = usarBarrio();
+  const { reportes, propuestas, actividades, capas, confirmarReporte } = usarBarrio();
+
+  // Las capas del catastro no dependen de los chips de arriba, que filtran lo
+  // que pasa ahora. Se encienden y apagan en la pantalla de capas, tal como
+  // separa los dos grupos el diseno.
+  const capasEncendidas = useMemo(
+    () =>
+      capas
+        .filter((capa) => capa.grupo === 'catastro' && capa.activa)
+        .map((capa) => capa.id)
+        .filter(esCapaDelCatastro),
+    [capas],
+  );
+  const catastro = usarElementosDelCatastro(capasEncendidas);
   const { menosAnimaciones } = usarPreferencias();
   const margenes = useSafeAreaInsets();
   const [filtro, setFiltro] = useState<Filtro>('Todo');
@@ -10940,7 +11515,7 @@ export default function Mapa() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.mapaFondo }}>
-      <MapaBarrio>
+      <MapaBarrio alCambiarElArea={catastro.alCambiarElArea}>
         {(ubicar) => (
           <>
             <MiUbicacion posicion={ubicar(UBICACION_PROPIA, 22)} />
@@ -10994,19 +11569,40 @@ export default function Mapa() {
                 ))
               : null}
 
-            <MarcadorMapa
-              icono="patrimonio"
-              color={categorias.patrimonio.color}
-              accesibilidad="Patrimonio: casona del catastro 2022"
-              posicion={ubicar({ x: 256, y: 400 }, 40)}
-              onPress={() => router.push('/mapa/ficha')}
-            />
+            {agruparEnPantalla(
+              catastro.elementos,
+              (elemento) => elemento.posicion,
+              catastro.zoom,
+              LADO_DE_AGRUPACION,
+            ).map((grupo) => {
+              const primero = grupo.elementos[0];
+              if (primero === undefined) return null;
 
-            <GrupoDeMarcadores
-              cantidad={5}
-              posicion={ubicar({ x: 120, y: 314 }, 48)}
-              onPress={() => setSeleccionado('contenedor-grajales')}
-            />
+              if (grupo.elementos.length > 1) {
+                return (
+                  <GrupoDeMarcadores
+                    key={grupo.clave}
+                    cantidad={grupo.elementos.length}
+                    posicion={ubicar(grupo.posicion, 48)}
+                  />
+                );
+              }
+
+              const capa = capasDelCatastro[primero.capa as IdCapaDelCatastro];
+              return (
+                <MarcadorMapa
+                  key={grupo.clave}
+                  icono={capa.icono}
+                  color={colorDelElemento(
+                    primero.capa as IdCapaDelCatastro,
+                    primero.estadoDePlatabanda,
+                  )}
+                  tamano={34}
+                  accesibilidad={descripcionDelElemento(primero)}
+                  posicion={ubicar(primero.posicion, 34)}
+                />
+              );
+            })}
           </>
         )}
       </MapaBarrio>
@@ -11178,6 +11774,26 @@ function CampoDeBusqueda({ valor, onCambiar }: { valor: string; onCambiar: (text
       }}
     />
   );
+}
+
+/**
+ * Lo que el lector de pantalla anuncia de un elemento del catastro.
+ *
+ * Lleva el dato que distingue a cada capa, porque el icono y el color no
+ * bastan: la regla de accesibilidad del sistema visual pide que los iconos
+ * vayan siempre acompanados de texto.
+ */
+function descripcionDelElemento(elemento: ElementoEnElMapa): string {
+  const capa = capasDelCatastro[elemento.capa as IdCapaDelCatastro];
+  const detalles = [
+    elemento.estadoDePlatabanda,
+    elemento.tipoDeMicrobasural,
+    elemento.direccion,
+    elemento.areaM2 > 0 ? `${Math.round(elemento.areaM2)} metros cuadrados` : undefined,
+    elemento.largoM > 0 ? `${Math.round(elemento.largoM)} metros de largo` : undefined,
+  ].filter((parte): parte is string => parte !== undefined);
+
+  return [capa.etiqueta, ...detalles].join(', ');
 }
 ```
 
@@ -12154,12 +12770,11 @@ function CuadroDeCategoria({
 
 #### `app/reportar/foto.tsx`
 
-3.2 Foto. (183 líneas)
+3.2 Foto. (182 líneas)
 
 ```tsx
 import * as SelectorDeImagen from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Image, View } from 'react-native';
 
 import { ChipDeCategoria } from '@/componentes/app';
@@ -12176,11 +12791,9 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
+import { MAXIMO_DE_FOTOS } from '@/datos/fotosDeReporte';
 import { usarBorradores } from '@/estado/borradores';
 import { crearVolver } from '@/utiles/navegacion';
-
-/** El diseno permite hasta tres fotografias por reporte. */
-const MAXIMO_DE_FOTOS = 3;
 
 /**
  * 3.2 Foto.
@@ -12191,7 +12804,10 @@ const MAXIMO_DE_FOTOS = 3;
 export default function PasoFoto() {
   const volver = crearVolver('/reportar/categoria');
   const { reporte, cambiarReporte } = usarBorradores();
-  const [imagenes, setImagenes] = useState<string[]>([]);
+  // Las fotos viven en el borrador y no aqui: antes se guardaban en esta
+  // pantalla y se perdian al avanzar, de modo que al publicar solo viajaba
+  // cuantas eran.
+  const imagenes = reporte.imagenes;
 
   async function elegirFoto(desde: 'camara' | 'galeria') {
     const permiso =
@@ -12209,8 +12825,7 @@ export default function PasoFoto() {
     if (elegida === undefined) return;
 
     const siguientes = [...imagenes, elegida.uri].slice(0, MAXIMO_DE_FOTOS);
-    setImagenes(siguientes);
-    cambiarReporte({ fotos: siguientes.length });
+    cambiarReporte({ imagenes: siguientes });
   }
 
   return (
@@ -12344,7 +12959,7 @@ export default function PasoFoto() {
 
 #### `app/reportar/ubicacion.tsx`
 
-3.3 Dónde. (200 líneas)
+3.3 Dónde. (205 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -12364,6 +12979,7 @@ import {
 } from '@/componentes/base';
 import { colores } from '@/diseno/colores';
 import { espacio, radio, sombras } from '@/diseno/medidas';
+import { ZOOM_PARA_UBICAR } from '@/dominio/barrio';
 import { usarBorradores } from '@/estado/borradores';
 import { crearVolver } from '@/utiles/navegacion';
 
@@ -12388,7 +13004,11 @@ export default function PasoUbicacion() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colores.mapaFondo }}>
-      <MapaBarrio />
+      <MapaBarrio
+        centro={reporte.posicion}
+        zoom={ZOOM_PARA_UBICAR}
+        alMoverse={(centro) => cambiarReporte({ posicion: centro })}
+      />
 
       <Columna
         separacion={espacio.medio}
@@ -12817,7 +13437,7 @@ export default function PasoDetalles() {
 
 #### `app/reportar/revisar.tsx`
 
-3.6 Revisar y enviar. (257 líneas)
+3.6 Revisar y enviar. (267 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -12838,13 +13458,14 @@ import {
   Presionable,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import type { NombreIcono } from '@/diseno/iconos';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import { categorias } from '@/dominio/categorias';
 import { usarBarrio } from '@/estado/barrio';
 import { usarBorradores } from '@/estado/borradores';
+import { usarQuienEntro } from '@/estado/sesion';
+import { pluralizar } from '@/utiles/texto';
 import { crearVolver } from '@/utiles/navegacion';
 
 /** Color de la divisoria entre filas del resumen. */
@@ -12861,6 +13482,7 @@ export default function PasoRevisar() {
   const volver = crearVolver('/reportar/detalles');
   const { reporte, cambiarReporte, reiniciarReporte } = usarBorradores();
   const { publicarReporte } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   const categoria = reporte.categoria === null ? undefined : categorias[reporte.categoria];
   const detalles = [reporte.comoSeFormo, reporte.desdeCuando?.toLowerCase()]
@@ -12875,8 +13497,10 @@ export default function PasoRevisar() {
       descripcion: reporte.descripcion,
       comoSeFormo: reporte.comoSeFormo ?? undefined,
       desdeCuando: reporte.desdeCuando ?? undefined,
-      tieneFoto: reporte.fotos > 0,
+      tieneFoto: reporte.imagenes.length > 0,
+      imagenes: reporte.imagenes,
       anonimo: reporte.anonimo,
+      posicion: reporte.posicion,
     });
     reiniciarReporte();
     router.replace('/reportar/enviado');
@@ -12921,7 +13545,7 @@ export default function PasoRevisar() {
           />
           <FilaDeResumen
             etiqueta="Foto"
-            valor={reporte.fotos === 0 ? 'Sin foto' : `${reporte.fotos} foto${reporte.fotos > 1 ? 's' : ''}`}
+            valor={textoDeFotos(reporte.imagenes.length)}
             adorno={<CuadroDeIcono icono="imagen" fondo={colores.fotoTramaClara} color={colores.fotoIcono} />}
             onCambiar={() => router.dismissTo('/reportar/foto')}
           />
@@ -12949,7 +13573,7 @@ export default function PasoRevisar() {
           </Texto>
           <Fila separacion={espacio.normal} alinear="stretch">
             <Opcion
-              texto={personas.rosa.nombre}
+              texto={quienEntro.nombre}
               seleccion="unica"
               activa={!reporte.anonimo}
               onPress={() => cambiarReporte({ anonimo: false })}
@@ -13077,11 +13701,17 @@ function CuadroDeIcono({
     </View>
   );
 }
+
+/** Resumen de cuantas fotos lleva el reporte, para la fila de revision. */
+function textoDeFotos(cuantas: number): string {
+  if (cuantas === 0) return 'Sin foto';
+  return `${cuantas} ${pluralizar(cuantas, 'foto', 'fotos')}`;
+}
 ```
 
 #### `app/reportar/enviado.tsx`
 
-3.7 Reporte enviado. (230 líneas)
+3.7 Reporte enviado. (231 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -13100,12 +13730,12 @@ import {
   Presionable,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
 import { idsDeEstado, estados } from '@/dominio/estados';
 import { usarBarrio } from '@/estado/barrio';
 import { usarPreferencias } from '@/estado/preferencias';
+import { usarQuienEntro } from '@/estado/sesion';
 
 /**
  * 3.7 Reporte enviado.
@@ -13118,6 +13748,7 @@ export default function ReporteEnviado() {
   const margenes = useSafeAreaInsets();
   const { ultimoReportePublicado } = usarBarrio();
   const { menosAnimaciones } = usarPreferencias();
+  const quienEntro = usarQuienEntro();
   const [avisosActivos, setAvisosActivos] = useState(true);
 
   const animar = !menosAnimaciones;
@@ -13161,7 +13792,7 @@ export default function ReporteEnviado() {
           interlineado={1.05}
           style={{ marginTop: espacio.comodo }}
         >
-          {`¡Listo, ${personas.rosa.nombre}!`}
+          {`¡Listo, ${quienEntro.nombre}!`}
         </Texto>
         <Texto
           tamano={17}
@@ -14141,7 +14772,7 @@ export default function NuevaPropuestaNecesita() {
 
 #### `app/propuestas/nueva/revisar.tsx`
 
-Paso 3, vista previa antes de publicar. (148 líneas)
+Paso 3, vista previa antes de publicar. (149 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -14160,11 +14791,11 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { colores } from '@/diseno/colores';
 import { espacio } from '@/diseno/medidas';
 import { usarBarrio } from '@/estado/barrio';
 import { usarBorradores } from '@/estado/borradores';
+import { usarQuienEntro } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /**
@@ -14178,6 +14809,7 @@ export default function RevisarPropuesta() {
   const volver = crearVolver('/propuestas/nueva/necesita');
   const { propuesta, reiniciarPropuesta } = usarBorradores();
   const { publicarPropuesta } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   function publicar() {
     const id = publicarPropuesta({
@@ -14225,13 +14857,13 @@ export default function RevisarPropuesta() {
             {propuesta.titulo}
           </Texto>
           <Fila separacion={espacio.comodo}>
-            <Avatar persona={personas.rosa} tamano={36} />
+            <Avatar persona={quienEntro} tamano={36} />
             <Columna crecer={1}>
               <Texto tamano={15} peso="fuerte">
-                {personas.rosa.nombre}
+                {quienEntro.nombre}
               </Texto>
               <Texto tamano={13.5} color={colores.grisTexto}>
-                {personas.rosa.vinculo}
+                {quienEntro.vinculo}
               </Texto>
             </Columna>
           </Fila>
@@ -15850,7 +16482,7 @@ export default function CrearActividad() {
 
 #### `app/perfil/index.tsx`
 
-7.2 Perfil y logros. (293 líneas)
+7.2 Perfil y logros. (294 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -15868,12 +16500,12 @@ import {
   Tarjeta,
   Texto,
 } from '@/componentes/base';
-import { personas } from '@/datos/personas';
 import { logros, resumenDelPerfil, totalDeLogros } from '@/datos/perfil';
 import { colores } from '@/diseno/colores';
 import { alturaTocable, espacio, radio } from '@/diseno/medidas';
 import type { Logro } from '@/dominio/tipos';
 import { usarBarrio } from '@/estado/barrio';
+import { usarQuienEntro } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 import { pluralizar } from '@/utiles/texto';
 
@@ -15888,6 +16520,7 @@ export default function Perfil() {
   const volver = crearVolver('/inicio');
   const margenes = useSafeAreaInsets();
   const { reportes, propuestas } = usarBarrio();
+  const quienEntro = usarQuienEntro();
 
   const conseguidos = logros.filter((logro) => logro.conseguido).length;
   const misReportes = reportes.filter((reporte) => reporte.esMio).length;
@@ -15951,12 +16584,12 @@ export default function Perfil() {
               }}
             >
               <Texto tamano={30} peso="fuerte" color={colores.bosque}>
-                {personas.rosa.inicial}
+                {quienEntro.inicial}
               </Texto>
             </View>
             <Columna separacion={espacio.corto}>
               <Texto tamano={30} familia="titulo" color={colores.papel} interlineado={1}>
-                {personas.rosa.nombre}
+                {quienEntro.nombre}
               </Texto>
               <Texto tamano={14} color={colores.textoTenueSobreBosque}>
                 {resumenDelPerfil.desde}
@@ -16150,7 +16783,7 @@ function Insignia({ logro }: { logro: Logro }) {
 
 #### `app/perfil/ajustes.tsx`
 
-7.3 Ajustes y accesibilidad. (240 líneas)
+7.3 Ajustes y accesibilidad. (251 líneas)
 
 ```tsx
 import { router } from 'expo-router';
@@ -16173,6 +16806,7 @@ import {
 import { colores } from '@/diseno/colores';
 import { espacio, radio } from '@/diseno/medidas';
 import { usarPreferencias, type FactorTexto } from '@/estado/preferencias';
+import { usarSesion } from '@/estado/sesion';
 import { crearVolver } from '@/utiles/navegacion';
 
 /** Nombre y tamano de muestra de cada escalon de letra. */
@@ -16192,9 +16826,18 @@ const tamanosDeLetra: { factor: FactorTexto; nombre: string; muestra: number }[]
 export default function Ajustes() {
   const volver = crearVolver('/perfil');
   const preferencias = usarPreferencias();
+  const { cerrarSesion } = usarSesion();
   const [resumenSemanal, setResumenSemanal] = useState(false);
   const [mostrarVinculo, setMostrarVinculo] = useState(true);
-  const [siempreAnonimo, setSiempreAnonimo] = useState(false);
+
+  // Mientras no existia el ingreso, esto solo volvia a la bienvenida. Ahora hay
+  // una sesion guardada en el telefono y hay que cerrarla de verdad: en un
+  // telefono prestado, que es algo que aparecio en terreno, lo contrario deja
+  // la cuenta abierta para el siguiente.
+  async function salir() {
+    await cerrarSesion();
+    router.replace('/');
+  }
 
   return (
     <Pantalla>
@@ -16352,12 +16995,13 @@ export default function Ajustes() {
             }
           />
           <FilaDeLista
-            titulo="Reportar siempre como anónimo"
+            titulo="Partir en anónimo al reportar"
+            detalle="Lo decides en cada reporte, antes de publicarlo"
             control={
               <Interruptor
-                activo={siempreAnonimo}
-                onCambiar={setSiempreAnonimo}
-                accesibilidad="Reportar siempre como anónimo"
+                activo={preferencias.proponerAnonimo}
+                onCambiar={(activo) => preferencias.cambiar('proponerAnonimo', activo)}
+                accesibilidad="Partir en anónimo al reportar"
               />
             }
           />
@@ -16387,7 +17031,7 @@ export default function Ajustes() {
         </ListaAgrupada>
 
         <View>
-          <FilaDeLista titulo="Cerrar sesión" ultima onPress={() => router.replace('/')} />
+          <FilaDeLista titulo="Cerrar sesión" ultima onPress={() => void salir()} />
         </View>
       </ScrollView>
     </Pantalla>
@@ -17570,7 +18214,7 @@ export default function RevisarReporte() {
           {reporte.titulo}
         </Texto>
         <Texto tamano={14} color={colores.grisTexto}>
-          {reporte.autor === null ? 'Publicado como anónimo' : `Publicado por ${reporte.autor.nombre}`}
+          {reporte.anonimo ? 'Publicado como anónimo' : `Publicado por ${reporte.autor?.nombre}`}
         </Texto>
         {reporte.descripcion === undefined ? null : (
           <Texto tamano={15.5} interlineado={1.4}>
@@ -17672,6 +18316,1635 @@ export default function RevisarReporte() {
 ```
 
 ---
+
+---
+
+## 18. Lo que se sumó al conectar el backend
+
+Este capítulo recoge lo que entró al proyecto después del corte del 13 de
+octubre, cuando la aplicación pasó de trabajar con datos en memoria a hacerlo
+contra Supabase. El capítulo 11 describe las pantallas tal como estaban en ese
+corte; la tabla siguiente dice cuáles cambiaron y en qué.
+
+| Pantalla | Qué cambió |
+|---|---|
+| 1.1 Bienvenida | Dejó de ofrecer reportar sin crear cuenta |
+| 1.4 Crear la cuenta | Dejó de ser opcional y ahora manda el código al correo |
+| 1.5 Código de ingreso | Pantalla nueva |
+| 2.2 Mapa | Teselas reales de OpenStreetMap y las capas del catastro |
+| 2.3 Capas del mapa | El detalle de cada capa cuenta los elementos cargados |
+| 3.2 Foto | Las fotografías se suben al depósito al publicar |
+| 3.4 Ubicación | La posición elegida se guarda como geografía |
+| 3.5 Revisar | El autor que se muestra es el de la sesión |
+| 3.7 Enviado | El saludo usa el nombre de quien entró |
+| 4.1 Inicio | El saludo y el avatar son los de la sesión |
+| 7.2 Perfil | El nombre y la inicial son los de la sesión |
+| 7.3 Ajustes | «Cerrar sesión» cierra la sesión de verdad |
+| Disposición raíz | Comprueba la sesión antes de dejar entrar a cualquier dirección |
+
+Los trece archivos que no existían en el corte anterior van a continuación, con
+el mismo formato del capítulo 17.
+
+
+### 18.1 Acceso a datos
+
+#### `src/datos/cliente.ts`
+
+Conexion con Supabase. Es opcional a proposito: sin credenciales configuradas la aplicacion sigue navegable con los datos de ejemplo. (68 líneas)
+
+```ts
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+
+/**
+ * Conexion con Supabase.
+ *
+ * El prototipo tiene que seguir corriendo sin backend, porque asi se muestra
+ * en reuniones y se prueba con vecinos. Por eso la conexion es opcional: si no
+ * hay credenciales configuradas, hayBackend queda en falso y el estado sigue
+ * trabajando con los datos de ejemplo en memoria.
+ *
+ * Las credenciales van en un archivo .env.local, que el .gitignore excluye.
+ * Ver .env.example.
+ */
+
+const direccion = process.env.EXPO_PUBLIC_SUPABASE_URL;
+
+// Clave publicable, la que Supabase reemplazo por la antigua clave anonima.
+// Viaja dentro de la aplicacion y eso es correcto: lo que protege los datos no
+// es esconderla, son las politicas de fila.
+const clavePublica = process.env.EXPO_PUBLIC_SUPABASE_CLAVE_PUBLICA;
+
+export const hayBackend: boolean =
+  typeof direccion === 'string' &&
+  direccion !== '' &&
+  typeof clavePublica === 'string' &&
+  clavePublica !== '';
+
+/**
+ * Nulo mientras no haya credenciales. Las funciones de datos lo comprueban
+ * antes de usarlo, en vez de dejar que reviente en medio de una pantalla.
+ */
+export const cliente: SupabaseClient | null = hayBackend
+  ? createClient(direccion as string, clavePublica as string, {
+      auth: {
+        storage: AsyncStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        // En un telefono no hay barra de direcciones de donde leer la sesion,
+        // y en el navegador la aplicacion no usa enlaces de retorno.
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
+
+/**
+ * Si hay una sesion abierta.
+ *
+ * Casi todo lo que la base expone exige cuenta, incluidas las capas del
+ * catastro. Preguntarlo antes de consultar evita disparar peticiones que la
+ * base va a rechazar mientras el ingreso por correo no exista.
+ */
+export async function haySesion(): Promise<boolean> {
+  if (cliente === null) return false;
+  const { data } = await cliente.auth.getSession();
+  return data.session !== null;
+}
+
+/** Atajo para las funciones de datos, que no pueden trabajar sin conexion. */
+export function exigirCliente(): SupabaseClient {
+  if (cliente === null) {
+    throw new Error(
+      'No hay conexion con Supabase. Falta configurar EXPO_PUBLIC_SUPABASE_URL y ' +
+        'EXPO_PUBLIC_SUPABASE_CLAVE_PUBLICA en .env.local.',
+    );
+  }
+  return cliente;
+}
+```
+
+#### `src/datos/sesion.ts`
+
+Pedir el codigo, canjearlo, cerrar sesion y leer o crear el perfil. (133 líneas)
+
+```ts
+import type { Persona } from '@/dominio/tipos';
+import { inicialDe } from '@/utiles/fechas';
+
+import { cliente, exigirCliente } from './cliente';
+
+/**
+ * Entrar a la plataforma.
+ *
+ * El mecanismo lo decidio la contraparte el 19 de octubre: crear cuenta es
+ * obligatorio, no hay contrasena y se entra con un codigo de seis numeros que
+ * llega al correo. La cuenta no pide nombre real ni RUT.
+ *
+ * El por que de cada mitad: la cuenta obligatoria responde a que alguien
+ * podria crearse varias identidades e inflar la priorizacion comunitaria. La
+ * ausencia de contrasena responde a lo contrario, a que la friccion del
+ * registro fue la barrera de abandono que mas aparecio en terreno, y a que el
+ * Banco del Tiempo murio en parte por no tener recuperacion de contrasenas.
+ */
+
+type FilaDePersona = {
+  id: string;
+  seudonimo: string;
+  vinculo: string;
+  es_organizacion: boolean;
+};
+
+function personaDesde(fila: FilaDePersona): Persona {
+  return {
+    id: fila.id,
+    nombre: fila.seudonimo,
+    inicial: inicialDe(fila.seudonimo),
+    vinculo: fila.vinculo,
+    esOrganizacion: fila.es_organizacion,
+  };
+}
+
+/** Manda el codigo al correo. Crea la cuenta si todavia no existe. */
+export async function pedirCodigo(correo: string): Promise<void> {
+  const { error } = await exigirCliente().auth.signInWithOtp({
+    email: correo.trim().toLowerCase(),
+    options: { shouldCreateUser: true },
+  });
+  if (error !== null) throw new Error(traducir(error.message));
+}
+
+/** Canjea el codigo por una sesion. */
+export async function confirmarCodigo(correo: string, codigo: string): Promise<void> {
+  const { error } = await exigirCliente().auth.verifyOtp({
+    email: correo.trim().toLowerCase(),
+    token: codigo.trim(),
+    type: 'email',
+  });
+  if (error !== null) throw new Error(traducir(error.message));
+}
+
+export async function cerrarSesion(): Promise<void> {
+  if (cliente === null) return;
+  await cliente.auth.signOut();
+}
+
+/**
+ * El perfil de quien tiene la sesion abierta, o nulo si todavia no lo creo.
+ *
+ * Entrar y tener perfil son dos cosas distintas: la cuenta nace con el
+ * codigo al correo, y el seudonimo con que el barrio te reconoce se elige
+ * despues, en el paso de perfil.
+ */
+export async function perfilActual(): Promise<Persona | null> {
+  if (cliente === null) return null;
+
+  const { data: sesion } = await cliente.auth.getSession();
+  const identificador = sesion.session?.user.id;
+  if (identificador === undefined) return null;
+
+  const { data, error } = await cliente
+    .from('personas')
+    .select('id, seudonimo, vinculo, es_organizacion')
+    .eq('id', identificador)
+    .maybeSingle();
+
+  if (error !== null) throw new Error(error.message);
+  if (data === null) return null;
+  return personaDesde(data as FilaDePersona);
+}
+
+/** Crea el perfil de quien acaba de entrar. */
+export async function crearPerfil(seudonimo: string, vinculo: string): Promise<Persona> {
+  const supabase = exigirCliente();
+  const { data: sesion } = await supabase.auth.getSession();
+  const identificador = sesion.session?.user.id;
+  if (identificador === undefined) throw new Error('No hay sesión abierta');
+
+  const { data, error } = await supabase
+    .from('personas')
+    .insert({ id: identificador, seudonimo: seudonimo.trim(), vinculo })
+    .select('id, seudonimo, vinculo, es_organizacion')
+    .single();
+
+  if (error !== null) {
+    if (error.code === '23505') throw new Error('Ese seudónimo ya lo usa alguien del barrio');
+    throw new Error(error.message);
+  }
+  return personaDesde(data as FilaDePersona);
+}
+
+/** Avisa cuando la sesion se abre o se cierra, para que el estado reaccione. */
+export function alCambiarLaSesion(hacer: () => void): () => void {
+  if (cliente === null) return () => {};
+  const { data } = cliente.auth.onAuthStateChange(() => hacer());
+  return () => data.subscription.unsubscribe();
+}
+
+/**
+ * Los mensajes de Supabase llegan en ingles y hablan de tokens. Se traducen a
+ * algo que una vecina pueda entender, que es la regla de lenguaje del
+ * sistema visual.
+ */
+function traducir(mensaje: string): string {
+  const minusculas = mensaje.toLowerCase();
+  if (minusculas.includes('invalid') && minusculas.includes('token')) {
+    return 'Ese código no es correcto. Revísalo o pide uno nuevo.';
+  }
+  if (minusculas.includes('expired')) {
+    return 'El código ya venció. Pide uno nuevo.';
+  }
+  if (minusculas.includes('rate limit') || minusculas.includes('too many')) {
+    return 'Pediste varios códigos seguidos. Espera un momento y vuelve a intentar.';
+  }
+  if (minusculas.includes('invalid') && minusculas.includes('email')) {
+    return 'Ese correo no parece válido.';
+  }
+  return mensaje;
+}
+```
+
+#### `src/datos/reportesEnLinea.ts`
+
+Las funciones de reportes contra la base: publicar, listar, confirmar, senalar y buscar cerca. (268 líneas)
+
+```ts
+import type { IdCategoria } from '@/dominio/categorias';
+import type { IdEstado } from '@/dominio/estados';
+import type { EventoDeSeguimiento, Persona, PuntoEnMapa, Reporte } from '@/dominio/tipos';
+import { diaYMes, hace, inicialDe } from '@/utiles/fechas';
+
+import { exigirCliente } from './cliente';
+
+/**
+ * Registrar y consultar reportes contra Supabase.
+ *
+ * Vive en src/datos y no en src/estado por la regla de capas: el estado llama
+ * a estas funciones y las pantallas llaman al estado. Ninguna pantalla importa
+ * este archivo.
+ *
+ * Toda lectura pasa por la vista reportes_publicos, que es la unica puerta que
+ * la base abre al cliente. Un reporte anonimo llega sin autor porque la vista
+ * ya lo corto, no porque aqui se decida esconderlo.
+ */
+
+/** Lo que la vista reportes_publicos devuelve por cada reporte. */
+type FilaDeReporte = {
+  id: string;
+  categoria: IdCategoria;
+  subtipo: string | null;
+  titulo: string;
+  direccion: string;
+  estado: IdEstado;
+  descripcion: string | null;
+  como_se_formo: string | null;
+  desde_cuando: string | null;
+  publicado_en: string;
+  latitud: number;
+  longitud: number;
+  tiene_foto: boolean;
+  anonimo: boolean;
+  autor: string | null;
+  autor_seudonimo: string | null;
+  autor_vinculo: string | null;
+  autor_es_organizacion: boolean | null;
+  es_mio: boolean;
+  confirmaciones: number;
+  senalamientos: number;
+};
+
+type FilaDeSeguimiento = {
+  reporte: string;
+  estado: IdEstado;
+  detalle: string;
+  ocurrio_en: string | null;
+};
+
+export type DatosParaCrearReporte = {
+  categoria: IdCategoria;
+  titulo: string;
+  direccion: string;
+  posicion: PuntoEnMapa;
+  anonimo: boolean;
+  subtipo?: string;
+  descripcion?: string;
+  comoSeFormo?: string;
+  desdeCuando?: string;
+  tieneFoto: boolean;
+};
+
+export type FiltroDeReportes = {
+  categoria?: IdCategoria;
+  estado?: IdEstado;
+  soloMios?: boolean;
+};
+
+/** Las columnas de la vista, en el orden en que la base las entrega. */
+const COLUMNAS = '*';
+
+/**
+ * Arma la persona a partir de lo que la vista deja pasar. Devuelve nulo
+ * cuando el reporte es anonimo, que es como el resto de la aplicacion
+ * representa que no hay a quien mostrar.
+ */
+function personaDesde(fila: FilaDeReporte): Persona | null {
+  if (fila.anonimo || fila.autor === null || fila.autor_seudonimo === null) {
+    return null;
+  }
+  return {
+    id: fila.autor,
+    nombre: fila.autor_seudonimo,
+    // La inicial se deriva del seudonimo, no se guarda en la base.
+    inicial: inicialDe(fila.autor_seudonimo),
+    vinculo: fila.autor_vinculo ?? '',
+    esOrganizacion: fila.autor_es_organizacion ?? false,
+  };
+}
+
+function seguimientoDesde(filas: FilaDeSeguimiento[]): EventoDeSeguimiento[] {
+  return filas.map((fila) => ({
+    estado: fila.estado,
+    fecha: fila.ocurrio_en === null ? undefined : diaYMes(new Date(fila.ocurrio_en)),
+    detalle: fila.detalle,
+    // Que el paso ya haya ocurrido se deriva de si tiene fecha, no se guarda.
+    ocurrio: fila.ocurrio_en !== null,
+  }));
+}
+
+function reporteDesde(fila: FilaDeReporte, seguimiento: EventoDeSeguimiento[]): Reporte {
+  const publicado = new Date(fila.publicado_en);
+  return {
+    id: fila.id,
+    categoria: fila.categoria,
+    subtipo: fila.subtipo ?? undefined,
+    titulo: fila.titulo,
+    direccion: fila.direccion,
+    estado: fila.estado,
+    descripcion: fila.descripcion ?? undefined,
+    comoSeFormo: fila.como_se_formo ?? undefined,
+    desdeCuando: fila.desde_cuando ?? undefined,
+    publicado: hace(publicado),
+    // El resumen tampoco se guarda: se arma al mostrar, por eso siempre dice
+    // la verdad aunque el reporte lleve meses publicado.
+    resumen: `Enviado ${hace(publicado)}`,
+    confirmaciones: fila.confirmaciones,
+    senalamientos: fila.senalamientos,
+    anonimo: fila.anonimo,
+    autor: personaDesde(fila),
+    esMio: fila.es_mio,
+    tieneFoto: fila.tiene_foto,
+    posicion: { latitud: fila.latitud, longitud: fila.longitud },
+    seguimiento,
+    // Las propuestas y los comentarios se traen aparte, cuando la pantalla de
+    // detalle los necesita. No se cargan al listar el mapa.
+    propuestas: [],
+    comentarios: [],
+  };
+}
+
+/** Trae el seguimiento de varios reportes de una vez, agrupado por reporte. */
+async function seguimientoDe(ids: string[]): Promise<Map<string, EventoDeSeguimiento[]>> {
+  const agrupado = new Map<string, EventoDeSeguimiento[]>();
+  if (ids.length === 0) return agrupado;
+
+  const { data, error } = await exigirCliente()
+    .from('eventos_de_seguimiento')
+    .select('reporte, estado, detalle, ocurrio_en')
+    .in('reporte', ids);
+
+  if (error !== null) throw new Error(error.message);
+
+  const filas = (data ?? []) as FilaDeSeguimiento[];
+  for (const id of ids) {
+    agrupado.set(
+      id,
+      seguimientoDesde(filas.filter((fila) => fila.reporte === id)),
+    );
+  }
+  return agrupado;
+}
+
+/**
+ * Publica un reporte y devuelve su identificador.
+ *
+ * El autor no se manda: lo pone la base a partir de la sesion, que es la unica
+ * forma de que nadie publique a nombre de otro.
+ */
+export async function crearReporte(datos: DatosParaCrearReporte): Promise<string> {
+  const { data, error } = await exigirCliente().rpc('crear_reporte', {
+    p_categoria: datos.categoria,
+    p_titulo: datos.titulo,
+    p_direccion: datos.direccion,
+    p_latitud: datos.posicion.latitud,
+    p_longitud: datos.posicion.longitud,
+    p_anonimo: datos.anonimo,
+    p_subtipo: datos.subtipo ?? null,
+    p_descripcion: datos.descripcion ?? null,
+    p_como_se_formo: datos.comoSeFormo ?? null,
+    p_desde_cuando: datos.desdeCuando ?? null,
+    p_tiene_foto: datos.tieneFoto,
+  });
+
+  if (error !== null) throw new Error(error.message);
+  return data as string;
+}
+
+/** Un reporte con su seguimiento, para la pantalla de detalle. */
+export async function obtenerReporte(id: string): Promise<Reporte | undefined> {
+  const { data, error } = await exigirCliente()
+    .from('reportes_publicos')
+    .select(COLUMNAS)
+    .eq('id', id)
+    .maybeSingle();
+
+  if (error !== null) throw new Error(error.message);
+  if (data === null) return undefined;
+
+  const fila = data as FilaDeReporte;
+  const seguimiento = await seguimientoDe([fila.id]);
+  return reporteDesde(fila, seguimiento.get(fila.id) ?? []);
+}
+
+/** Listado para el mapa y para el panel de gestion. */
+export async function listarReportes(filtro: FiltroDeReportes = {}): Promise<Reporte[]> {
+  let consulta = exigirCliente()
+    .from('reportes_publicos')
+    .select(COLUMNAS)
+    .order('publicado_en', { ascending: false });
+
+  if (filtro.categoria !== undefined) consulta = consulta.eq('categoria', filtro.categoria);
+  if (filtro.estado !== undefined) consulta = consulta.eq('estado', filtro.estado);
+  if (filtro.soloMios === true) consulta = consulta.eq('es_mio', true);
+
+  const { data, error } = await consulta;
+  if (error !== null) throw new Error(error.message);
+
+  const filas = (data ?? []) as FilaDeReporte[];
+  const seguimiento = await seguimientoDe(filas.map((fila) => fila.id));
+  return filas.map((fila) => reporteDesde(fila, seguimiento.get(fila.id) ?? []));
+}
+
+/**
+ * Reportes dentro de un radio, ordenados del mas cercano al mas lejano.
+ *
+ * El filtro corre en la base contra el indice espacial. Es lo que permite que
+ * el paso de ubicacion avise de un posible duplicado sin descargar el barrio
+ * entero.
+ */
+export async function listarReportesCerca(
+  punto: PuntoEnMapa,
+  radioEnMetros = 300,
+): Promise<Reporte[]> {
+  const { data, error } = await exigirCliente().rpc('reportes_cerca', {
+    p_latitud: punto.latitud,
+    p_longitud: punto.longitud,
+    p_radio_metros: radioEnMetros,
+  });
+
+  if (error !== null) throw new Error(error.message);
+
+  const filas = (data ?? []) as FilaDeReporte[];
+  const seguimiento = await seguimientoDe(filas.map((fila) => fila.id));
+  return filas.map((fila) => reporteDesde(fila, seguimiento.get(fila.id) ?? []));
+}
+
+/**
+ * Confirma que el reporte existe y devuelve cuantas confirmaciones lleva.
+ *
+ * Confirmar dos veces o confirmar el reporte propio lo rechaza la base, no
+ * esta funcion. Aqui solo se traduce el rechazo a un mensaje que la pantalla
+ * pueda mostrar.
+ */
+export async function confirmarReporte(id: string): Promise<number> {
+  const { data, error } = await exigirCliente().rpc('confirmar_reporte', {
+    p_reporte: id,
+  });
+
+  if (error !== null) {
+    if (error.code === '23505') throw new Error('Ya confirmaste este reporte');
+    if (error.code === '23514') throw new Error('No puedes confirmar tu propio reporte');
+    throw new Error(error.message);
+  }
+  return data as number;
+}
+
+/** Marca el reporte como posiblemente inexistente, lo que dispara revision. */
+export async function senalarReporte(id: string, motivo?: string): Promise<void> {
+  const { error } = await exigirCliente().rpc('senalar_reporte', {
+    p_reporte: id,
+    p_motivo: motivo ?? null,
+  });
+
+  if (error !== null) throw new Error(error.message);
+}
+```
+
+#### `src/datos/fotosDeReporte.ts`
+
+Subir una fotografia reducida, asociarla al reporte y entregarla con enlaces firmados que caducan. (157 líneas)
+
+```ts
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
+
+import { exigirCliente } from './cliente';
+
+/**
+ * Fotografias de los reportes.
+ *
+ * El diagnostico 2022 dejo previsto un campo para colgarle una foto a cada
+ * punto y nunca lo lleno. Esto es lo que cierra esa brecha: la ubicacion ya
+ * estaba levantada y lo que faltaba era mostrar en que estado esta.
+ *
+ * El deposito es privado, asi que las fotos no se leen por direccion publica
+ * sino con un enlace firmado que caduca.
+ */
+
+const DEPOSITO = 'fotos-de-reportes';
+
+/** El diseno admite hasta tres fotos por reporte. */
+export const MAXIMO_DE_FOTOS = 3;
+
+/**
+ * Lado mayor al que se reduce cada foto antes de subirla.
+ *
+ * El plan gratuito da 1 GB de almacenamiento y la bitacora lo senala como el
+ * primer limite que se va a alcanzar. A 1600 pixeles y calidad 0,6 una foto
+ * de telefono queda en unos 300 a 600 KB, de modo que el GB alcanza para unos
+ * 550 reportes con tres fotos cada uno. Sin reducir, alcanzaria para 70.
+ */
+const LADO_MAYOR = 1600;
+const CALIDAD = 0.6;
+
+/** Cuanto dura el enlace firmado con el que se muestra una foto. */
+const SEGUNDOS_DE_VIGENCIA = 60 * 60;
+
+export type FotoDeReporte = {
+  id: string;
+  orden: number;
+  /** Enlace firmado, listo para pasarle a un componente Image. */
+  url: string;
+};
+
+type FilaDeFoto = {
+  id: string;
+  ruta: string;
+  orden: number;
+};
+
+/**
+ * Reduce y recomprime antes de subir.
+ *
+ * Recomprimir tiene un efecto secundario buscado: la imagen resultante se
+ * escribe de nuevo y pierde los metadatos EXIF del original, donde el telefono
+ * suele dejar la coordenada exacta y el modelo del aparato. La posicion del
+ * reporte la elige la persona en el mapa, no la foto.
+ */
+async function prepararParaSubir(uri: string): Promise<Blob> {
+  const contexto = ImageManipulator.manipulate(uri).resize({ width: LADO_MAYOR });
+  const imagen = await contexto.renderAsync();
+  const reducida = await imagen.saveAsync({
+    compress: CALIDAD,
+    format: SaveFormat.JPEG,
+  });
+
+  const respuesta = await fetch(reducida.uri);
+  return await respuesta.blob();
+}
+
+/**
+ * Sube una foto y la asocia al reporte.
+ *
+ * La ruta lleva el identificador del reporte como carpeta, que es lo que
+ * permite que las politicas del deposito decidan si quien sube es la autora
+ * mirando solo el nombre del archivo.
+ */
+export async function subirFotoDeReporte(
+  idReporte: string,
+  uri: string,
+  orden: number,
+): Promise<void> {
+  const supabase = exigirCliente();
+  const ruta = `${idReporte}/${orden}.jpg`;
+  const contenido = await prepararParaSubir(uri);
+
+  const { error: errorAlSubir } = await supabase.storage
+    .from(DEPOSITO)
+    .upload(ruta, contenido, { contentType: 'image/jpeg', upsert: true });
+
+  if (errorAlSubir !== null) throw new Error(errorAlSubir.message);
+
+  const { error: errorAlAsociar } = await supabase
+    .from('fotos_de_reporte')
+    .upsert({ reporte: idReporte, ruta, orden }, { onConflict: 'reporte,orden' });
+
+  // Si la fila no se pudo escribir, el archivo quedaria huerfano ocupando
+  // espacio sin que ninguna pantalla lo muestre, asi que se retira.
+  if (errorAlAsociar !== null) {
+    await supabase.storage.from(DEPOSITO).remove([ruta]);
+    throw new Error(errorAlAsociar.message);
+  }
+}
+
+/** Sube las fotos de un reporte recien publicado, en orden. */
+export async function subirFotosDeReporte(idReporte: string, uris: string[]): Promise<void> {
+  const cuantas = Math.min(uris.length, MAXIMO_DE_FOTOS);
+  for (let posicion = 0; posicion < cuantas; posicion += 1) {
+    const uri = uris[posicion];
+    if (uri === undefined) continue;
+    await subirFotoDeReporte(idReporte, uri, posicion + 1);
+  }
+}
+
+/** Las fotos de un reporte, con enlaces firmados listos para mostrar. */
+export async function fotosDeReporte(idReporte: string): Promise<FotoDeReporte[]> {
+  const supabase = exigirCliente();
+
+  const { data, error } = await supabase
+    .from('fotos_de_reporte')
+    .select('id, ruta, orden')
+    .eq('reporte', idReporte)
+    .order('orden');
+
+  if (error !== null) throw new Error(error.message);
+
+  const filas = (data ?? []) as FilaDeFoto[];
+  if (filas.length === 0) return [];
+
+  const { data: firmadas, error: errorAlFirmar } = await supabase.storage
+    .from(DEPOSITO)
+    .createSignedUrls(
+      filas.map((fila) => fila.ruta),
+      SEGUNDOS_DE_VIGENCIA,
+    );
+
+  if (errorAlFirmar !== null) throw new Error(errorAlFirmar.message);
+
+  return filas.flatMap((fila, posicion) => {
+    const url = firmadas?.[posicion]?.signedUrl;
+    if (url === undefined || url === null) return [];
+    return [{ id: fila.id, orden: fila.orden, url }];
+  });
+}
+
+/** Quita una foto del reporte y del deposito. */
+export async function borrarFotoDeReporte(idReporte: string, orden: number): Promise<void> {
+  const supabase = exigirCliente();
+  const ruta = `${idReporte}/${orden}.jpg`;
+
+  const { error } = await supabase
+    .from('fotos_de_reporte')
+    .delete()
+    .eq('reporte', idReporte)
+    .eq('orden', orden);
+
+  if (error !== null) throw new Error(error.message);
+
+  await supabase.storage.from(DEPOSITO).remove([ruta]);
+}
+```
+
+#### `src/datos/catastroEnLinea.ts`
+
+Los elementos del catastro dentro de un recuadro y cuantos tiene cada capa. (96 líneas)
+
+```ts
+import type { IdCapaDelCatastro } from '@/dominio/capas';
+import { esCapaDelCatastro } from '@/dominio/capas';
+import type { ElementoEnElMapa, RecuadroDelMapa } from '@/dominio/tipos';
+
+import { exigirCliente } from './cliente';
+
+/**
+ * Las capas del catastro socioambiental 2022, leidas desde la base.
+ *
+ * La consulta pide solo lo que entra en el recuadro visible y solo de las
+ * capas encendidas. El filtro corre en la base contra el indice espacial: con
+ * 903 elementos traerlos todos todavia funcionaria, pero el catastro completo
+ * son 2.032 y el barrio sigue reportando.
+ */
+
+type FilaDeElemento = {
+  id: string;
+  capa: string;
+  fid: number;
+  latitud: number;
+  longitud: number;
+  tipo_de_geometria: string;
+  area_m2: number;
+  largo_m: number;
+  direccion: string | null;
+  estado_platabanda: string | null;
+  tipo_microbasural: string | null;
+  quien_lo_cuida: string | null;
+  anotado_en: string | null;
+};
+
+function elementoDesde(fila: FilaDeElemento): ElementoEnElMapa | null {
+  // Una capa que exista en la base pero que la aplicacion no sepa dibujar se
+  // omite en vez de romper la pantalla. Pasaria si alguien carga una de las
+  // veintitres capas que quedaron fuera.
+  if (!esCapaDelCatastro(fila.capa)) return null;
+
+  return {
+    id: fila.id,
+    capa: fila.capa,
+    fid: fila.fid,
+    posicion: { latitud: fila.latitud, longitud: fila.longitud },
+    tipoDeGeometria: fila.tipo_de_geometria,
+    areaM2: fila.area_m2,
+    largoM: fila.largo_m,
+    direccion: fila.direccion ?? undefined,
+    estadoDePlatabanda: fila.estado_platabanda ?? undefined,
+    tipoDeMicrobasural: fila.tipo_microbasural ?? undefined,
+    quienLoCuida: fila.quien_lo_cuida ?? undefined,
+  };
+}
+
+/** Los elementos visibles en un recuadro, de las capas que se le pidan. */
+export async function elementosEnRecuadro(
+  recuadro: RecuadroDelMapa,
+  capas: IdCapaDelCatastro[],
+): Promise<ElementoEnElMapa[]> {
+  if (capas.length === 0) return [];
+
+  const { data, error } = await exigirCliente().rpc('elementos_en_recuadro', {
+    p_sur: recuadro.sur,
+    p_oeste: recuadro.oeste,
+    p_norte: recuadro.norte,
+    p_este: recuadro.este,
+    p_capas: capas,
+  });
+
+  if (error !== null) throw new Error(error.message);
+
+  return ((data ?? []) as FilaDeElemento[]).flatMap((fila) => {
+    const elemento = elementoDesde(fila);
+    return elemento === null ? [] : [elemento];
+  });
+}
+
+/**
+ * Cuantos elementos cargados tiene cada capa, para el detalle de la lista.
+ *
+ * Cuenta lo que hay y no lo que el diagnostico declaro. Son cifras distintas:
+ * en microbasurales el diagnostico anota 40 y hay 39, porque uno quedo a dos
+ * kilometros del barrio y la carga lo rechazo. Un numero en pantalla que no
+ * corresponde a lo que se puede tocar en el mapa es peor que no mostrarlo.
+ */
+export async function conteoPorCapa(): Promise<Record<string, number>> {
+  const { data, error } = await exigirCliente()
+    .from('conteo_de_capas')
+    .select('capa, elementos');
+
+  if (error !== null) throw new Error(error.message);
+
+  const conteo: Record<string, number> = {};
+  for (const fila of (data ?? []) as { capa: string; elementos: number }[]) {
+    conteo[fila.capa] = fila.elementos;
+  }
+  return conteo;
+}
+```
+
+
+### 18.2 Dominio
+
+#### `src/dominio/barrio.ts`
+
+El recuadro del barrio y los niveles de acercamiento del mapa. (34 líneas)
+
+```ts
+import type { PuntoEnMapa } from './tipos';
+
+/**
+ * Donde queda el barrio, en coordenadas reales.
+ *
+ * El recuadro sale de la capa "Delimitacion de area de estudio" del catastro
+ * socioambiental 2022, que viene en EPSG:4326. No es una aproximacion dibujada
+ * a ojo: es el mismo poligono con el que la contraparte levanto el diagnostico,
+ * y por eso define que entra y que no entra al barrio en toda la aplicacion.
+ */
+export const RECUADRO_DEL_BARRIO = {
+  oeste: -70.671086,
+  este: -70.655836,
+  sur: -33.458024,
+  norte: -33.446147,
+} as const;
+
+export const CENTRO_DEL_BARRIO: PuntoEnMapa = {
+  latitud: (RECUADRO_DEL_BARRIO.sur + RECUADRO_DEL_BARRIO.norte) / 2,
+  longitud: (RECUADRO_DEL_BARRIO.oeste + RECUADRO_DEL_BARRIO.este) / 2,
+};
+
+/**
+ * El barrio mide alrededor de 1,4 km de lado. En zoom 15 cabe entero en una
+ * pantalla de telefono y en 16 se distingue la vereda, que es el detalle que
+ * hace falta para dejar un reporte donde corresponde.
+ */
+export const ZOOM_MINIMO = 14;
+export const ZOOM_MAXIMO = 18;
+export const ZOOM_DEL_BARRIO = 15;
+export const ZOOM_PARA_UBICAR = 17;
+
+/** Hasta donde se puede arrastrar el mapa antes de salirse del barrio. */
+export const MARGEN_FUERA_DEL_BARRIO = 0.004;
+```
+
+#### `src/dominio/capas.ts`
+
+Las ocho capas del catastro con su icono y su color, y los colores por estado de platabanda. (114 líneas)
+
+```ts
+import type { NombreIcono } from '@/diseno/iconos';
+
+/**
+ * Las capas del catastro socioambiental 2022 que la plataforma muestra.
+ *
+ * Son ocho y no las treinta y una del diagnostico. Las otras veintitres o
+ * bien no estan en los mapas web que la organizacion publico, o bien quedaron
+ * con la geometria levantada y los atributos vacios, como los 172 semaforos y
+ * las 249 veredas. Mostrar un punto del que no se sabe nada no ayuda a nadie.
+ *
+ * Los colores viven aqui y no en la paleta general por la misma razon que los
+ * de las categorias de reporte: son vocabulario del dominio, no decoracion.
+ */
+
+export const idsDeCapaDelCatastro = [
+  'microbasurales',
+  'platabandas',
+  'basureros',
+  'reciclaje',
+  'areas-verdes',
+  'bancas',
+  'paraderos',
+  'ciclovias',
+] as const;
+
+export type IdCapaDelCatastro = (typeof idsDeCapaDelCatastro)[number];
+
+export type CapaDelCatastro = {
+  id: IdCapaDelCatastro;
+  etiqueta: string;
+  color: string;
+  icono: NombreIcono;
+};
+
+export const capasDelCatastro: Record<IdCapaDelCatastro, CapaDelCatastro> = {
+  microbasurales: {
+    id: 'microbasurales',
+    etiqueta: 'Microbasurales',
+    color: '#7A4A1F',
+    icono: 'basura',
+  },
+  platabandas: {
+    id: 'platabandas',
+    etiqueta: 'Platabandas',
+    color: '#2E6B3F',
+    icono: 'arbol',
+  },
+  basureros: {
+    id: 'basureros',
+    etiqueta: 'Basureros',
+    color: '#4A5560',
+    icono: 'basura',
+  },
+  reciclaje: {
+    id: 'reciclaje',
+    etiqueta: 'Puntos de reciclaje',
+    color: '#1F7A6B',
+    icono: 'hoja',
+  },
+  'areas-verdes': {
+    id: 'areas-verdes',
+    etiqueta: 'Áreas verdes',
+    color: '#3F8F4F',
+    icono: 'arbol',
+  },
+  bancas: {
+    id: 'bancas',
+    etiqueta: 'Bancas',
+    color: '#8C6A3F',
+    icono: 'mobiliario',
+  },
+  paraderos: {
+    id: 'paraderos',
+    etiqueta: 'Paraderos',
+    color: '#2C5A8C',
+    icono: 'calle',
+  },
+  ciclovias: {
+    id: 'ciclovias',
+    etiqueta: 'Ciclovías',
+    color: '#6B4380',
+    icono: 'calle',
+  },
+};
+
+/**
+ * Las platabandas se colorean por su estado de uso y no con un color unico.
+ *
+ * Es la unica capa que lo hace, y no es un capricho: el diagnostico la
+ * simboliza asi en su propio mapa web, y el dato que importa del barrio es
+ * que 262 de las 500 estan abandonadas o ya se pavimentaron. Con un color
+ * plano esa cifra deja de verse en el mapa.
+ */
+export const coloresPorEstadoDePlatabanda: Record<string, string> = {
+  'En uso': '#2E6B3F',
+  Abandonado: '#B0581A',
+  Eliminado: '#6B6257',
+};
+
+/** El color con que se dibuja un elemento, segun su capa y su taxonomia. */
+export function colorDelElemento(
+  capa: IdCapaDelCatastro,
+  estadoDePlatabanda?: string,
+): string {
+  if (capa === 'platabandas' && estadoDePlatabanda !== undefined) {
+    return coloresPorEstadoDePlatabanda[estadoDePlatabanda] ?? capasDelCatastro[capa].color;
+  }
+  return capasDelCatastro[capa].color;
+}
+
+/** Si el identificador corresponde a una capa del catastro que se dibuja. */
+export function esCapaDelCatastro(id: string): id is IdCapaDelCatastro {
+  return (idsDeCapaDelCatastro as readonly string[]).includes(id);
+}
+```
+
+
+### 18.3 Estado
+
+#### `src/estado/sesion.tsx`
+
+Quien esta usando la aplicacion, en cinco situaciones distintas, y el atajo para las pantallas que muestran su nombre. (137 líneas)
+
+```tsx
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+
+import { hayBackend, haySesion } from '@/datos/cliente';
+import { personas } from '@/datos/personas';
+import {
+  alCambiarLaSesion,
+  cerrarSesion as cerrarSesionEnLinea,
+  confirmarCodigo as confirmarCodigoEnLinea,
+  crearPerfil as crearPerfilEnLinea,
+  pedirCodigo as pedirCodigoEnLinea,
+  perfilActual,
+} from '@/datos/sesion';
+import type { Persona } from '@/dominio/tipos';
+
+/**
+ * Quien esta usando la aplicacion.
+ *
+ * Son cuatro situaciones y no dos, porque entrar y tener perfil son cosas
+ * distintas. La cuenta nace cuando el codigo del correo se canjea; el
+ * seudonimo con que el barrio reconoce a esa persona se elige despues.
+ */
+export type EstadoDeSesion =
+  /** Todavia se esta averiguando si hay sesion guardada. */
+  | 'cargando'
+  /** Hay backend y nadie ha entrado. */
+  | 'sinCuenta'
+  /** Entro con el codigo pero aun no elige seudonimo. */
+  | 'sinPerfil'
+  /** Entro y tiene perfil. */
+  | 'dentro'
+  /** No hay credenciales configuradas: el prototipo corre con datos de ejemplo. */
+  | 'sinBackend';
+
+type ContextoSesion = {
+  estado: EstadoDeSesion;
+  /** Quien publica, comenta y confirma. Nunca es nula si se puede usar la app. */
+  persona: Persona | null;
+  pedirCodigo: (correo: string) => Promise<void>;
+  /** Devuelve en que queda la sesion: de eso depende si hay que crear perfil. */
+  confirmarCodigo: (correo: string, codigo: string) => Promise<EstadoDeSesion>;
+  crearPerfil: (seudonimo: string, vinculo: string) => Promise<void>;
+  cerrarSesion: () => Promise<void>;
+};
+
+const Contexto = createContext<ContextoSesion | null>(null);
+
+export function ProveedorSesion({ children }: { children: ReactNode }) {
+  const [estado, setEstado] = useState<EstadoDeSesion>(hayBackend ? 'cargando' : 'sinBackend');
+  const [persona, setPersona] = useState<Persona | null>(
+    // Sin backend el prototipo sigue siendo navegable, que es como se muestra
+    // en reuniones y como se prueba con vecinos.
+    hayBackend ? null : personas.rosa,
+  );
+
+  const revisar = useCallback(async (): Promise<EstadoDeSesion> => {
+    if (!hayBackend) return 'sinBackend';
+    const perfil = await perfilActual();
+    if (perfil !== null) {
+      setPersona(perfil);
+      setEstado('dentro');
+      return 'dentro';
+    }
+    setPersona(null);
+    // perfilActual devuelve nulo tanto si no hay sesion como si la hay y aun
+    // no se elige seudonimo, asi que hay que distinguirlas aqui.
+    const siguiente: EstadoDeSesion = (await haySesion()) ? 'sinPerfil' : 'sinCuenta';
+    setEstado(siguiente);
+    return siguiente;
+  }, []);
+
+  useEffect(() => {
+    if (!hayBackend) return;
+    void revisar();
+    return alCambiarLaSesion(() => void revisar());
+  }, [revisar]);
+
+  const pedirCodigo = useCallback(async (correo: string) => {
+    await pedirCodigoEnLinea(correo);
+  }, []);
+
+  // Devuelve el estado en vez de dejar que la pantalla lo lea del contexto,
+  // porque ahi todavia figura el de antes de entrar.
+  const confirmarCodigo = useCallback(
+    async (correo: string, codigo: string) => {
+      await confirmarCodigoEnLinea(correo, codigo);
+      return revisar();
+    },
+    [revisar],
+  );
+
+  const crearPerfil = useCallback(async (seudonimo: string, vinculo: string) => {
+    const nueva = await crearPerfilEnLinea(seudonimo, vinculo);
+    setPersona(nueva);
+    setEstado('dentro');
+  }, []);
+
+  const cerrarSesion = useCallback(async () => {
+    await cerrarSesionEnLinea();
+    setPersona(null);
+    setEstado('sinCuenta');
+  }, []);
+
+  const valor = useMemo<ContextoSesion>(
+    () => ({ estado, persona, pedirCodigo, confirmarCodigo, crearPerfil, cerrarSesion }),
+    [estado, persona, pedirCodigo, confirmarCodigo, crearPerfil, cerrarSesion],
+  );
+
+  return <Contexto.Provider value={valor}>{children}</Contexto.Provider>;
+}
+
+/**
+ * Quien entro, para las pantallas que muestran su nombre o su avatar.
+ *
+ * El respaldo al vecino de ejemplo es el mismo que usa el proveedor cuando no
+ * hay credenciales: asi el prototipo sigue siendo navegable para mostrarlo en
+ * reuniones. Con backend configurado, estas pantallas van detras del ingreso y
+ * la persona nunca es nula.
+ */
+export function usarQuienEntro(): Persona {
+  return usarSesion().persona ?? personas.rosa;
+}
+
+export function usarSesion(): ContextoSesion {
+  const contexto = useContext(Contexto);
+  if (contexto === null) {
+    throw new Error('usarSesion necesita estar dentro de ProveedorSesion');
+  }
+  return contexto;
+}
+```
+
+#### `src/estado/catastro.tsx`
+
+Los elementos del catastro que corresponden al area visible del mapa. (86 líneas)
+
+```tsx
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import { elementosEnRecuadro } from '@/datos/catastroEnLinea';
+import { hayBackend, haySesion } from '@/datos/cliente';
+import type { IdCapaDelCatastro } from '@/dominio/capas';
+import { ZOOM_DEL_BARRIO } from '@/dominio/barrio';
+import type { ElementoEnElMapa, RecuadroDelMapa } from '@/dominio/tipos';
+
+/**
+ * Los elementos del catastro que caben en lo que el mapa tiene a la vista.
+ *
+ * No es un contexto sino un enganche, porque lo que se pide depende del
+ * encuadre de una pantalla y no del estado compartido de la aplicacion.
+ */
+
+type AreaMirada = {
+  recuadro: RecuadroDelMapa;
+  zoom: number;
+};
+
+export type ElementosDelCatastro = {
+  elementos: ElementoEnElMapa[];
+  /** Zoom vigente, que la pantalla necesita para agrupar las chinchetas. */
+  zoom: number;
+  /** Se le pasa al mapa para que avise cuando cambia el encuadre. */
+  alCambiarElArea: (recuadro: RecuadroDelMapa, zoom: number) => void;
+  error: string | null;
+};
+
+export function usarElementosDelCatastro(
+  capasEncendidas: IdCapaDelCatastro[],
+): ElementosDelCatastro {
+  const [area, setArea] = useState<AreaMirada | null>(null);
+  const [elementos, setElementos] = useState<ElementoEnElMapa[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const alCambiarElArea = useCallback((recuadro: RecuadroDelMapa, zoom: number) => {
+    setArea({ recuadro, zoom });
+  }, []);
+
+  // Un arreglo nuevo en cada render volveria a disparar el efecto sin parar,
+  // asi que lo que entra en las dependencias es el contenido y no el arreglo.
+  const clave = useMemo(() => [...capasEncendidas].sort().join(','), [capasEncendidas]);
+
+  useEffect(() => {
+    if (!hayBackend || area === null || clave === '') {
+      setElementos([]);
+      return;
+    }
+
+    let vigente = true;
+    haySesion()
+      .then(async (abierta) => {
+        // Las capas del catastro quedan detras de la cuenta, igual que el
+        // resto. Sin sesion no se pide nada, en vez de intentar y que la base
+        // rechace una peticion por cada movimiento del mapa.
+        if (!abierta) return [];
+        return await elementosEnRecuadro(
+          area.recuadro,
+          clave.split(',') as IdCapaDelCatastro[],
+        );
+      })
+      .then((lista) => {
+        if (vigente) setElementos(lista);
+      })
+      .catch((falla: unknown) => {
+        if (!vigente) return;
+        setError(
+          falla instanceof Error ? falla.message : 'No se pudieron cargar las capas',
+        );
+      });
+
+    // Si el mapa se mueve antes de que llegue la respuesta, esa respuesta ya
+    // no corresponde a lo que se esta viendo y se descarta.
+    return () => {
+      vigente = false;
+    };
+  }, [area, clave]);
+
+  return {
+    elementos,
+    zoom: area?.zoom ?? ZOOM_DEL_BARRIO,
+    alCambiarElArea,
+    error,
+  };
+}
+```
+
+
+### 18.4 Utiles
+
+#### `src/utiles/geografia.ts`
+
+Proyeccion de Mercator, direcciones de tesela, metros por pixel y distancias. (84 líneas)
+
+```ts
+import type { PuntoEnMapa } from '@/dominio/tipos';
+
+/**
+ * Proyeccion Web Mercator, la que usan las teselas de OpenStreetMap.
+ *
+ * Esta aqui y no dentro del componente del mapa porque tambien la necesitan la
+ * pantalla de ubicacion, para saber donde quedo el punto, y mas adelante las
+ * consultas por cercania, para estimar el radio en metros antes de preguntarle
+ * a la base.
+ */
+
+/** Las teselas de OpenStreetMap miden 256 pixeles de lado. */
+export const LADO_DE_TESELA = 256;
+
+/** Radio de la Tierra en metros, el valor que asume Web Mercator. */
+const RADIO_TERRESTRE = 6378137;
+
+export type PuntoEnPixeles = {
+  x: number;
+  y: number;
+};
+
+/** Cuantos pixeles de lado tiene el mundo entero en un nivel de zoom. */
+function ladoDelMundo(zoom: number): number {
+  return LADO_DE_TESELA * 2 ** zoom;
+}
+
+/** Pasa una coordenada geografica a pixeles absolutos del mundo. */
+export function aPixeles(punto: PuntoEnMapa, zoom: number): PuntoEnPixeles {
+  const lado = ladoDelMundo(zoom);
+  const seno = Math.sin((punto.latitud * Math.PI) / 180);
+  return {
+    x: ((punto.longitud + 180) / 360) * lado,
+    y: (0.5 - Math.log((1 + seno) / (1 - seno)) / (4 * Math.PI)) * lado,
+  };
+}
+
+/** El camino de vuelta: de pixeles absolutos a coordenada geografica. */
+export function aCoordenada(pixeles: PuntoEnPixeles, zoom: number): PuntoEnMapa {
+  const lado = ladoDelMundo(zoom);
+  const n = Math.PI - (2 * Math.PI * pixeles.y) / lado;
+  return {
+    latitud: (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))),
+    longitud: (pixeles.x / lado) * 360 - 180,
+  };
+}
+
+/**
+ * Direccion de una tesela en el servidor de OpenStreetMap.
+ *
+ * La politica de uso del servidor publico permite trafico liviano como el de
+ * un prototipo, y exige mostrar la atribucion, que el mapa dibuja en la
+ * esquina. Si la aplicacion llega a produccion hay que cambiar esto por un
+ * proveedor propio o contratado.
+ */
+export function direccionDeTesela(columna: number, fila: number, zoom: number): string {
+  return `https://tile.openstreetmap.org/${zoom}/${columna}/${fila}.png`;
+}
+
+/**
+ * Metros por pixel en un nivel de zoom, corregidos por la latitud.
+ *
+ * Mercator estira las distancias a medida que uno se aleja del ecuador, asi
+ * que sin esta correccion un radio de cien metros en Santiago se dibujaria
+ * veinte por ciento mas grande de lo que es.
+ */
+export function metrosPorPixel(latitud: number, zoom: number): number {
+  return (
+    (2 * Math.PI * RADIO_TERRESTRE * Math.cos((latitud * Math.PI) / 180)) / ladoDelMundo(zoom)
+  );
+}
+
+/** Distancia en metros entre dos puntos, por la formula del semiverseno. */
+export function distanciaEnMetros(uno: PuntoEnMapa, otro: PuntoEnMapa): number {
+  const aRadianes = (grados: number): number => (grados * Math.PI) / 180;
+  const diferenciaLatitud = aRadianes(otro.latitud - uno.latitud);
+  const diferenciaLongitud = aRadianes(otro.longitud - uno.longitud);
+  const a =
+    Math.sin(diferenciaLatitud / 2) ** 2 +
+    Math.cos(aRadianes(uno.latitud)) *
+      Math.cos(aRadianes(otro.latitud)) *
+      Math.sin(diferenciaLongitud / 2) ** 2;
+  return 2 * RADIO_TERRESTRE * Math.asin(Math.sqrt(a));
+}
+```
+
+#### `src/utiles/fechas.ts`
+
+Fechas legibles, antiguedad corta e inicial de un seudonimo. (68 líneas)
+
+```ts
+/**
+ * Como se escriben las fechas de cara a la persona.
+ *
+ * La base guarda fechas reales porque el mecanismo de priorizacion necesita
+ * restarlas. Lo que los mockups muestran, "recien" o "hace 2 h", es una forma
+ * de escribirlas y se calcula aqui, al mostrar. Guardar el texto seria
+ * guardar algo que envejece solo.
+ */
+
+const MESES = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
+
+const UN_MINUTO = 60 * 1000;
+const UNA_HORA = 60 * UN_MINUTO;
+const UN_DIA = 24 * UNA_HORA;
+
+/** Dia y mes abreviados, como los rotula la linea de tiempo: "3 nov". */
+export function diaYMes(fecha: Date): string {
+  return `${fecha.getDate()} ${MESES[fecha.getMonth()] ?? ''}`;
+}
+
+/**
+ * Antiguedad en el formato largo de las listas. Pasada una semana deja de
+ * contar dias y muestra la fecha, que es mas util que "hace 23 d".
+ */
+export function hace(fecha: Date, ahora: Date = new Date()): string {
+  const transcurrido = ahora.getTime() - fecha.getTime();
+
+  if (transcurrido < 2 * UN_MINUTO) return 'recién';
+  if (transcurrido < UNA_HORA) return `hace ${Math.floor(transcurrido / UN_MINUTO)} min`;
+  if (transcurrido < UN_DIA) return `hace ${Math.floor(transcurrido / UNA_HORA)} h`;
+  if (transcurrido < 2 * UN_DIA) return 'ayer';
+  if (transcurrido < 7 * UN_DIA) return `hace ${Math.floor(transcurrido / UN_DIA)} días`;
+  return diaYMes(fecha);
+}
+
+/** Antiguedad apretada, la de los comentarios: "4 d", "2 h". */
+export function antiguedadCorta(fecha: Date, ahora: Date = new Date()): string {
+  const transcurrido = ahora.getTime() - fecha.getTime();
+
+  if (transcurrido < UNA_HORA) return `${Math.max(1, Math.floor(transcurrido / UN_MINUTO))} min`;
+  if (transcurrido < UN_DIA) return `${Math.floor(transcurrido / UNA_HORA)} h`;
+  return `${Math.floor(transcurrido / UN_DIA)} d`;
+}
+
+/** La inicial del avatar sale del seudonimo, no se guarda en la base. */
+export function inicialDe(seudonimo: string): string {
+  const limpio = seudonimo.trim();
+  if (limpio === '') return '?';
+  const palabras = limpio.split(/\s+/);
+  // Las organizaciones llevan dos letras, como "RC" para Republica Circular.
+  if (palabras.length > 1 && palabras.every((palabra) => palabra.length > 2)) {
+    return `${palabras[0]?.[0] ?? ''}${palabras[1]?.[0] ?? ''}`.toUpperCase();
+  }
+  return (limpio[0] ?? '?').toUpperCase();
+}
+```
+
+#### `src/utiles/agrupacion.ts`
+
+Agrupa marcadores por celdas de pantalla para que no se pisen. (79 líneas)
+
+```ts
+import type { PuntoEnMapa } from '@/dominio/tipos';
+
+import { aPixeles } from './geografia';
+
+/**
+ * Agrupa lo que queda demasiado junto en la pantalla.
+ *
+ * Hace falta porque el catastro trae 500 platabandas en 129 hectareas:
+ * dibujadas una por una tapan el mapa y dejan de decir nada. La pantalla de
+ * capas del prototipo ya contemplaba esto, con un marcador de grupo que al
+ * tocarlo acerca el mapa.
+ *
+ * La agrupacion se hace en pixeles y no en grados a proposito: lo que molesta
+ * es que dos chinchetas se pisen en la pantalla, y cuanto se pisan depende
+ * del zoom, no de la distancia real.
+ */
+
+export type Grupo<T> = {
+  /** Estable mientras no cambie el zoom, sirve de clave de React. */
+  clave: string;
+  elementos: T[];
+  /** Centro del grupo, donde se dibuja la chincheta. */
+  posicion: PuntoEnMapa;
+};
+
+export function agruparEnPantalla<T>(
+  elementos: T[],
+  posicionDe: (elemento: T) => PuntoEnMapa,
+  zoom: number,
+  ladoDeCeldaEnPixeles: number,
+): Grupo<T>[] {
+  const celdas = new Map<string, T[]>();
+
+  for (const elemento of elementos) {
+    const pixeles = aPixeles(posicionDe(elemento), zoom);
+    const columna = Math.floor(pixeles.x / ladoDeCeldaEnPixeles);
+    const fila = Math.floor(pixeles.y / ladoDeCeldaEnPixeles);
+    const clave = `${columna},${fila}`;
+    const existentes = celdas.get(clave);
+    if (existentes === undefined) {
+      celdas.set(clave, [elemento]);
+    } else {
+      existentes.push(elemento);
+    }
+  }
+
+  const grupos: Grupo<T>[] = [];
+  for (const [clave, miembros] of celdas) {
+    grupos.push({
+      clave: `${zoom}-${clave}`,
+      elementos: miembros,
+      posicion: promedio(miembros.map(posicionDe)),
+    });
+  }
+  return grupos;
+}
+
+/**
+ * Centro de un grupo.
+ *
+ * El promedio simple alcanza porque una celda mide unas pocas decenas de
+ * metros, una escala donde la curvatura de la Tierra no cambia el resultado.
+ */
+function promedio(puntos: PuntoEnMapa[]): PuntoEnMapa {
+  const inicial = { latitud: 0, longitud: 0 };
+  if (puntos.length === 0) return inicial;
+
+  const suma = puntos.reduce(
+    (acumulado, punto) => ({
+      latitud: acumulado.latitud + punto.latitud,
+      longitud: acumulado.longitud + punto.longitud,
+    }),
+    inicial,
+  );
+  return {
+    latitud: suma.latitud / puntos.length,
+    longitud: suma.longitud / puntos.length,
+  };
+}
+```
+
+
+### 18.5 Pantalla nueva
+
+#### `app/ingreso/codigo.tsx`
+
+1.5 Codigo de ingreso. Es la contrapartida de no usar contrasenas. (171 líneas)
+
+```tsx
+import { router, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+
+import {
+  Aviso,
+  BarraInferior,
+  Boton,
+  BotonCircular,
+  CampoTexto,
+  Columna,
+  Fila,
+  Pantalla,
+  Presionable,
+  Texto,
+} from '@/componentes/base';
+import { colores } from '@/diseno/colores';
+import { alturaTocable, espacio } from '@/diseno/medidas';
+import { usarSesion } from '@/estado/sesion';
+
+/** El código que manda Supabase tiene seis números. */
+const LARGO_DEL_CODIGO = 6;
+
+/**
+ * 1.5 Código de ingreso.
+ *
+ * Es la contrapartida de no usar contrasenas. La decision del 19 de octubre
+ * separa dos cosas que antes iban juntas: entrar exige cuenta, pero mostrarse
+ * es decision de cada persona en cada publicacion.
+ *
+ * Despues de confirmar el codigo quedan dos caminos. Si la persona ya tenia
+ * perfil, entra directo. Si es la primera vez, se crea el perfil con el
+ * seudonimo que escribio en el paso anterior, porque crearlo exige una sesion
+ * abierta y antes de este paso no la habia.
+ */
+export default function CodigoDeIngreso() {
+  const { correo, seudonimo } = useLocalSearchParams<{
+    correo: string;
+    seudonimo: string;
+  }>();
+  const { confirmarCodigo, crearPerfil, pedirCodigo } = usarSesion();
+
+  const [codigo, setCodigo] = useState('');
+  const [comprobando, setComprobando] = useState(false);
+  const [reenviado, setReenviado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const completo = codigo.trim().length === LARGO_DEL_CODIGO;
+
+  async function confirmar() {
+    setComprobando(true);
+    setError(null);
+    try {
+      const sesion = await confirmarCodigo(correo, codigo);
+
+      // Quien ya tiene cuenta vuelve a escribir un seudonimo en el paso
+      // anterior, pero aqui se descarta: crear el perfil de nuevo choca con el
+      // que ya existe y dejaria a la persona afuera teniendo la sesion abierta.
+      if (sesion === 'sinPerfil' && seudonimo.length > 0) {
+        await crearPerfil(seudonimo, 'Vive en el barrio');
+      }
+      router.replace('/inicio');
+    } catch (falla: unknown) {
+      setError(falla instanceof Error ? falla.message : 'No se pudo confirmar el código');
+    } finally {
+      setComprobando(false);
+    }
+  }
+
+  async function reenviar() {
+    setError(null);
+    try {
+      await pedirCodigo(correo);
+      setReenviado(true);
+    } catch (falla: unknown) {
+      setError(falla instanceof Error ? falla.message : 'No se pudo reenviar el código');
+    }
+  }
+
+  return (
+    <Pantalla>
+      <Fila style={{ paddingHorizontal: espacio.seccion, paddingBottom: espacio.normal }}>
+        <BotonCircular
+          icono="flechaIzquierda"
+          accesibilidad="Volver"
+          onPress={() => router.back()}
+        />
+      </Fila>
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: espacio.seccion }}
+        >
+          <Columna separacion={espacio.normal} style={{ paddingHorizontal: espacio.bloque }}>
+            <Texto tamano={32} familia="titulo" interlineado={1.08}>
+              Escribe el código
+            </Texto>
+            <Texto tamano={17} color={colores.grisTexto} interlineado={1.45}>
+              {`Mandamos seis números a ${correo}. Llegan en unos segundos.`}
+            </Texto>
+          </Columna>
+
+          <Columna
+            separacion={espacio.amplio}
+            style={{ paddingHorizontal: espacio.seccion, paddingTop: 22 }}
+          >
+            <CampoTexto
+              etiqueta="Código de 6 números"
+              valor={codigo}
+              onCambiar={(valor) => setCodigo(valor.replace(/\D/g, '').slice(0, LARGO_DEL_CODIGO))}
+              marcaDeAgua="000000"
+              tipoDeTeclado="numero"
+            />
+
+            {reenviado ? (
+              <Aviso tono="logro">
+                <Texto tamano={15} interlineado={1.4}>
+                  Te mandamos un código nuevo.
+                </Texto>
+              </Aviso>
+            ) : null}
+
+            {error === null ? null : (
+              <Aviso tono="cuidado">
+                <Texto tamano={15} interlineado={1.4}>
+                  {error}
+                </Texto>
+              </Aviso>
+            )}
+
+            <Presionable
+              onPress={() => void reenviar()}
+              accessibilityRole="button"
+              accessibilityLabel="Mandar el código de nuevo"
+              style={{
+                minHeight: alturaTocable.minima,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Texto
+                tamano={16}
+                color={colores.verde}
+                peso="fuerte"
+                style={{ textDecorationLine: 'underline' }}
+              >
+                No me llegó, mándalo de nuevo
+              </Texto>
+            </Presionable>
+          </Columna>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
+      <BarraInferior>
+        <Boton
+          texto={comprobando ? 'Comprobando...' : 'Entrar al barrio'}
+          alto={56}
+          tamanoDeTexto={18}
+          deshabilitado={!completo || comprobando}
+          onPress={() => void confirmar()}
+          vibrar
+        />
+      </BarraInferior>
+    </Pantalla>
+  );
+}
+```
 
 ## Cierre
 

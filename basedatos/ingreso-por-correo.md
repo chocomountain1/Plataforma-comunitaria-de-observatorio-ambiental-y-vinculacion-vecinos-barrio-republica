@@ -58,6 +58,48 @@ que dice la decisión del 19 de octubre y lo que está escrito en la pantalla de
 ingreso, así que se bajó el ajuste a seis en vez de cambiar la aplicación. El
 código vence en una hora y solo se puede usar una vez.
 
+## Lo que la aplicación tuvo que cambiar
+
+La pantalla de crear cuenta dejó de ser opcional y se agregó la del código. La
+cuenta nace cuando el código se canjea, y el perfil con el seudónimo se crea
+inmediatamente después, porque crearlo exige una sesión abierta y antes de ese
+paso no la hay.
+
+Cuatro cosas más, que la decisión daba por hechas y no lo estaban.
+
+| Qué estaba mal | Por qué importaba |
+|---|---|
+| La cuenta obligatoria era un camino, no una puerta | Escribiendo la dirección en el navegador, o reabriendo la aplicación donde se cerró, se entraba sin sesión: se veía el barrio de ejemplo mientras la base rechazaba todo |
+| «Cerrar sesión» no cerraba nada | Solo volvía a la bienvenida, y en un teléfono prestado eso deja la cuenta abierta para el siguiente |
+| Cinco pantallas mostraban a la vecina de ejemplo | Las dos de revisar antes de publicar decían que se publicaría con otro nombre mientras la base guardaba el propio |
+| La bienvenida ofrecía reportar sin crear cuenta | Era cierto hasta el 19 de octubre |
+
+La comprobación de la puerta vive en la disposición raíz y espera a que el
+navegador interno exista antes de redirigir. Sin esa espera, abriendo la
+aplicación directamente en una dirección la sesión se resuelve antes y la
+redirección se pierde en silencio, que es lo que pasó al probarla la primera
+vez.
+
+## El permiso que faltaba
+
+El primer ingreso real falló en el paso siguiente al código, con
+`permission denied for table personas`. Las políticas de esa tabla estaban
+escritas desde la migración 0004 pero nunca recibieron el permiso que las
+habilita. No se podía ver antes: hasta ese momento nadie había tenido sesión.
+Resuelto en la migración 0011 y anotado en el modelo de datos.
+
+## Cómo se probó
+
+| Paso | Resultado |
+|---|---|
+| Crear la cuenta desde la pantalla | El correo sale y el registro de envíos lo marca entregado |
+| El correo que llega | En español, con seis números |
+| Entrar con el código | La sesión se abre y el perfil se crea |
+| Volver a entrar con la cuenta ya creada | Entra directo, sin intentar crear el perfil de nuevo |
+| Cerrar sesión | Se cierra de verdad: al recargar no vuelve a entrar |
+| Entrar por dirección directa sin sesión | Rebota a la bienvenida |
+| Lo que la sesión desbloquea | El mapa carga las capas del catastro y el saludo usa el nombre de quien entró |
+
 ## Lo que falta
 
 El remitente `onboarding@resend.dev` es el dominio de prueba de Resend y **solo

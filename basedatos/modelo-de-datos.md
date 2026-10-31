@@ -6,9 +6,14 @@ del catastro 2022 que ya usa el prototipo, declarados como tipos enumerados.
 
 ## Estado
 
-**Las nueve migraciones están aplicadas** en el proyecto `barrio-republica` de
+**Las trece migraciones están aplicadas** en el proyecto `barrio-republica` de
 Supabase, región São Paulo, con PostGIS 3.3.7. Las capas prioritarias del
-catastro están cargadas: 903 elementos.
+catastro están cargadas: 903 elementos. El ingreso con cuenta funciona, y con
+él la aplicación lee y escribe de verdad contra este esquema.
+
+La numeración salta de la 0009 a la 0011 y conviene saber por qué: la 0010
+abría la lectura del catastro al rol anónimo y **se descartó**, para no relajar
+la decisión de cuenta obligatoria. No quedó sin aplicar, quedó eliminada.
 
 ## Cómo aplicarlas
 
@@ -130,7 +135,7 @@ necesita mantención.
 | `elementos_del_catastro` | Los 2.032 elementos. **Vacía**, ver `carga/` |
 | `revisiones_del_catastro` | Lo que un vecino responde sobre el estado de hoy |
 
-## Tres cosas que solo aparecieron al aplicarlo
+## Cuatro cosas que solo aparecieron al aplicarlo
 
 El esquema escrito se veía correcto y no funcionaba. Las dos primeras fallas
 son la misma: el cliente solo puede leer `reportes.id`, que es lo que impide
@@ -142,18 +147,26 @@ leer otra columna de esa tabla.
 | `confirmar_reporte` | Copia `reportes.autor` a la tabla de confirmaciones | Pasa a `security definer`. No abre un hueco: quien confirma lo fija la función con `auth.uid()`, y las dos reglas son restricciones de la tabla |
 | Leer el seguimiento y los comentarios | Sus políticas miraban `reportes.oculto` con una subconsulta, que corre con los permisos de quien consulta | Se encapsula en `reporte_visible()`, que corre como dueña |
 | Leer y crear el propio perfil | `personas` tenía políticas pero ningún permiso otorgado, y hacen falta los dos: el permiso dice si puedes tocar la tabla y la política dice cuáles filas | `grant select, insert, update on personas to authenticated`, en la migración 0011 |
+| Subir una fotografía | La aplicación sube con `upsert`, que PostgREST traduce a un `insert ... on conflict do update`, y Postgres exige permiso de actualización aunque la fila no exista y aunque el conflicto nunca ocurra | `grant update` más la política de reemplazo, en la migración 0013 |
 
 La salida fácil en los dos primeros casos era abrir la columna del autor, que
 es exactamente lo que el modelo no puede hacer. El mismo patrón se repitió
 después en `reporte_es_mio()`, para las fotos.
 
-El tercero es de otra familia y vale anotarlo aparte: no se vio al escribir el
-esquema ni al probarlo con sesiones simuladas, sino en el primer ingreso real,
-porque hasta entonces nadie había tenido cuenta. Una política sin permiso no
-avisa que está incompleta: la base responde `permission denied` sin llegar a
-mirarla. Conviene revisar que cada tabla con políticas tenga su `grant`, que es
-lo que falta todavía en `gestores_territoriales`, a propósito y documentado en
-la misma migración.
+Los dos últimos son de otra familia y valen anotarse aparte. No se vieron al
+escribir el esquema ni al probarlo con sesiones simuladas, sino en el primer
+ingreso real y en la primera subida real, porque hasta entonces nadie había
+tenido cuenta. Una política sin permiso no avisa que está incompleta: la base
+responde `permission denied` sin llegar a mirarla, que es un mensaje que manda
+a buscar justo donde no está el problema.
+
+La regla operativa que queda: **cada tabla con políticas tiene que tener
+otorgados los verbos que el cliente realmente usa, y `upsert` cuenta como
+dos.** El caso inverso también existía y se corrigió en la migración 0012:
+`gestores_territoriales` tenía una política que no podía aplicarse nunca,
+porque la tabla no tiene ningún permiso otorgado al cliente y así debe
+quedarse. Sacarla deja la tabla más cerrada, no menos, porque con RLS activo y
+sin ninguna política Postgres niega todo lo que no venga de la dueña.
 
 ## El catastro queda detrás de la cuenta
 

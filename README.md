@@ -71,6 +71,7 @@ nativas.
 | Almacenamiento de imágenes | Depósito privado y políticas aplicadas |
 | Capas del catastro 2022 | 903 elementos cargados en ocho capas |
 | Sesión y cuentas | Ingreso por código al correo, probado de punta a punta |
+| Pausa por inactividad | Resuelta con un latido diario desde GitHub Actions |
 
 Las políticas de fila se escriben contra `auth.uid()`, de modo que sin sesión
 la aplicación no puede leer ni escribir nada. Eso es lo que hacía que el
@@ -83,14 +84,16 @@ en [`basedatos/ingreso-por-correo.md`](basedatos/ingreso-por-correo.md).
 Las credenciales van en un `.env.local`: ver [`.env.example`](.env.example) y
 [`basedatos/modelo-de-datos.md`](basedatos/modelo-de-datos.md).
 
-Dos advertencias que condicionan la puesta en marcha. El plan gratuito de
-Supabase pausa los proyectos tras siete días sin actividad, lo que en una
-organización pequeña reproduce el patrón que ya mató dos herramientas del
-barrio, así que hace falta una consulta programada que lo mantenga vivo. Y las
-capas del catastro 2022 se migraron con la autorización que Jorge dio de
-palabra en reunión, donde señaló que es información abierta: esa autorización
-no quedó escrita en ninguna minuta, así que conviene pedir una línea por correo
-o mensaje y guardarla junto a la evidencia.
+La pausa por inactividad del plan gratuito, que en una organización pequeña
+reproduce el patrón que ya mató dos herramientas del barrio, la resuelve una
+llamada diaria programada: cómo funciona y qué hay que configurar una sola vez
+está en [`basedatos/latido.md`](basedatos/latido.md).
+
+Queda una advertencia. Las capas del catastro 2022 se migraron con la
+autorización que Jorge dio de palabra en reunión, donde señaló que es
+información abierta: esa autorización no quedó escrita en ninguna minuta, así
+que conviene pedir una línea por correo o mensaje y guardarla junto a la
+evidencia.
 
 ---
 
@@ -162,10 +165,13 @@ src/
   utiles/                 Ayudas sueltas
 
 basedatos/
-  migraciones/            Los catorce archivos SQL, en el orden en que se aplican
+  migraciones/            Los dieciséis archivos SQL, en el orden en que se aplican
   carga/                  Preparación y validación del catastro 2022
   modelo-de-datos.md      Por qué cada tabla y cada política son así
   ingreso-por-correo.md   Cómo se manda el código y qué falta para abrirlo
+  latido.md               Cómo se evita que el plan gratuito pause el proyecto
+
+.github/workflows/        Lo único que corre solo: el latido diario
 ```
 
 ### La regla de dependencias

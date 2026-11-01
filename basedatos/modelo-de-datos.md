@@ -6,7 +6,7 @@ del catastro 2022 que ya usa el prototipo, declarados como tipos enumerados.
 
 ## Estado
 
-**Las catorce migraciones están aplicadas** en el proyecto `barrio-republica` de
+**Las dieciséis migraciones están aplicadas** en el proyecto `barrio-republica` de
 Supabase, región São Paulo, con PostGIS 3.3.7. Las capas prioritarias del
 catastro están cargadas: 903 elementos. El ingreso con cuenta funciona, y con
 él la aplicación lee y escribe de verdad contra este esquema.
@@ -48,9 +48,11 @@ mantenga, así que **lo único que hay que recordar al escribir una migración
 nueva es cerrarla con esa línea**.
 
 La tabla no tiene permisos otorgados al cliente y tiene RLS activo, de modo que
-solo la ve quien administra la base. Volver a aplicar una migración actualiza
-la fecha en vez de fallar, porque los archivos están escritos para poder
-correrse de nuevo.
+solo la ve quien administra la base. Escribirla tampoco se puede desde fuera,
+aunque eso recién es cierto desde la migración 0016: hasta entonces
+`registrar_migracion` estaba abierta y cualquiera con la clave podía agregarle
+filas. Volver a aplicar una migración actualiza la fecha en vez de fallar,
+porque los archivos están escritos para poder correrse de nuevo.
 
 ## Las tres decisiones que no son una traducción mecánica
 
@@ -152,7 +154,7 @@ necesita mantención.
 | `comentarios` | Conversación sobre el reporte, con hilos |
 | `utiles_de_comentario` | Una fila por persona que marca útil |
 | `capas_del_catastro` | Las 31 capas del diagnóstico 2022 |
-| `elementos_del_catastro` | Los 2.032 elementos. **Vacía**, ver `carga/` |
+| `elementos_del_catastro` | 903 elementos de ocho capas, de los 2.032 del diagnóstico. Ver `carga/` |
 | `revisiones_del_catastro` | Lo que un vecino responde sobre el estado de hoy |
 
 ## Cuatro cosas que solo aparecieron al aplicarlo
@@ -188,6 +190,43 @@ porque la tabla no tiene ningún permiso otorgado al cliente y así debe
 quedarse. Sacarla deja la tabla más cerrada, no menos, porque con RLS activo y
 sin ninguna política Postgres niega todo lo que no venga de la dueña.
 
+## La quinta, que no apareció sola
+
+Las cuatro anteriores se delataron porque algo dejaba de funcionar. Esta no
+rompía nada, y por eso estuvo dos días en pie sin que nadie la notara.
+
+**Postgres concede la ejecución de cada función recién creada a `PUBLIC`.** Los
+`grant execute ... to authenticated` repartidos por las migraciones no le
+quitaban nada al rol anónimo: declaraban una intención que la base nunca llegó
+a aplicar. La migración 0004 dejó escrito que el rol anónimo no recibe nada, y
+para las tablas era cierto, porque ahí sí hay un `revoke all`.
+
+Comprobado el 1 de noviembre llamando a la API con la clave publicable y sin
+sesión abierta:
+
+| Función | Qué devolvía sin cuenta |
+|---|---|
+| `reportes_cerca` | **Los reportes completos**, con el identificador de quien publicó los que no son anónimos. Es `security definer`, así que corría como dueña y el permiso de la tabla no la frenaba |
+| `registrar_migracion` | **Escribía una fila.** También `security definer`, y sin validar nada |
+| `es_gestor`, `reporte_visible` | `false`. Inofensivo, pero no debería contestar |
+| Las demás | `permission denied`, por el permiso de la tabla que leen |
+
+La primera es grave de verdad: contradice en los hechos la decisión de cuenta
+obligatoria del 19 de octubre, que es la misma que llevó a descartar la
+migración 0010. Las que fallaban por el permiso de la tabla no estaban bien,
+estaban afortunadas: las defendía la segunda línea porque la primera no
+existía.
+
+La migración 0016 revoca la ejecución a `PUBLIC` en las diez funciones con
+nombre y le da a `es_gestor` el permiso propio que hasta entonces no
+necesitaba. Las tres funciones de disparador quedan como están, porque
+PostgREST no expone lo que devuelve `trigger`.
+
+**La regla que queda: una función nueva nace abierta.** Mientras se apliquen a
+mano, cada migración que cree una función tiene que decir explícitamente quién
+la ejecuta, y la forma de comprobarlo no es leer el archivo sino llamarla desde
+fuera sin sesión.
+
 ## El catastro queda detrás de la cuenta
 
 Se evaluó abrir la lectura de las capas del catastro al rol anónimo,
@@ -202,9 +241,10 @@ elementos ya estén cargados y la consulta espacial funcione.
 
 ## Lo que falta
 
-- **El ingreso por código al correo.** Las políticas se escriben contra
-  `auth.uid()`. Sin sesión, la aplicación no puede leer nada: ni reportes, ni
-  fotos, ni capas. Es lo que bloquea la verificación visual del mapa.
+- **Un remitente que le escriba a cualquiera.** El ingreso por código funciona,
+  pero el dominio de prueba del proveedor solo entrega en la casilla del
+  equipo, así que una vecina todavía no puede recibir su código. Ver
+  [`ingreso-por-correo.md`](ingreso-por-correo.md).
 - **La ficha de un elemento del catastro**, que hoy muestra un ejemplo fijo y
   todavía no lee el elemento que se tocó.
 - **Las propuestas y las actividades**, que tienen sus propios tipos en el

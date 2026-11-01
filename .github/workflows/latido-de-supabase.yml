@@ -1,0 +1,44 @@
+name: Latido de Supabase
+
+# El plan gratuito pausa el proyecto tras siete dias sin peticiones. Una al dia
+# deja seis dias de margen, que es lo que hace falta porque GitHub atrasa y a
+# veces se salta las ejecuciones programadas cuando sus maquinas estan
+# cargadas. La hora no es en punto por lo mismo: el minuto cero de cada hora es
+# el momento mas congestionado y el que mas se atrasa.
+#
+# Dos avisos para quien lo mantenga. La programacion solo corre desde la rama
+# por omision, asi que mientras esto viva en una rama aparte no se dispara
+# solo. Y GitHub desactiva los flujos programados de un repositorio tras
+# sesenta dias sin commits, avisando por correo al dueño.
+on:
+  schedule:
+    - cron: '17 12 * * *'
+  workflow_dispatch:
+
+# No necesita nada de GitHub, solo salir a internet.
+permissions: {}
+
+jobs:
+  latir:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Preguntarle la hora a la base
+        env:
+          URL: ${{ secrets.SUPABASE_URL }}
+          CLAVE: ${{ secrets.SUPABASE_CLAVE_PUBLICA }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$CLAVE" ]; then
+            echo "Faltan los secretos SUPABASE_URL y SUPABASE_CLAVE_PUBLICA."
+            echo "Se agregan en Settings, Secrets and variables, Actions."
+            exit 1
+          fi
+          codigo=$(curl --silent --show-error \
+            --output respuesta.txt --write-out '%{http_code}' \
+            --request POST "$URL/rest/v1/rpc/latido" \
+            --header "apikey: $CLAVE" \
+            --header 'Content-Type: application/json' \
+            --data '{}')
+          echo "La base respondio $codigo y dijo que son las $(cat respuesta.txt)"
+          # Un 200 es la unica respuesta que demuestra que Postgres contesto.
+          # Un proyecto pausado responde 540, y una clave vencida, 401.
+          [ "$codigo" = "200" ]
